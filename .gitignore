@@ -1,0 +1,83 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# testing
+coverage/
+
+# next.js
+.next/
+out/
+
+# production
+build/
+dist/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# local env files
+.env
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+
+# logs
+*.log
+
+# database
+*.db
+*.db-journal
+
+# uploads (用户头像上传目录)
+public/avatars/
+public/lingxi-logo.png
+
+# scripts temp (构建/部署脚本临时文件)
+.zscripts/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Prisma (生成的客户端已包含在node_modules中)
+node_modules/.prisma/
+
+# package manager lock (如果团队统一用bun/npm/pnpm之一，可保留需要的)
+# yarn.lock
+# pnpm-lock.yaml
+# bun.lockb
+
+# backend specific
+backend/*.db
+backend/*.db-journal
+backend/__pycache__/
+
+# upload module (独立的Python上传服务)
+upload/__pycache__/

@@ -1,0 +1,109 @@
+id: medical
+name: 医小助
+display_name: 医疗健康助手
+icon: 🏥
+theme: medical
+description: 专业医疗健康咨询
+intents:
+  - id: emergency
+    priority: 0
+    keywords: [救命, 胸痛, 昏倒, 120, 急救, 心梗, 脑梗, 大出血, 呼吸困难]
+    skip_llm: true
+    subscription: free
+    use_rag: false
+  - id: symptom
+    priority: 3
+    keywords: [头痛, 发烧, 肚子疼, 咳嗽, 呕吐, 腹泻, 皮疹, 头晕, 恶心, 乏力, 失眠, 发热, 痛, 疼, 肿]
+    tools: [symptom_checker]
+    use_rag: true
+    subscription: rag
+    stream_tools: true
+  - id: drug_query
+    priority: 2
+    keywords: [阿莫西林, 布洛芬, 吃什么药, 药品, 用药, 剂量, 副作用, 感冒药, 消炎药, 抗生素]
+    tools: [drug_query]
+    use_rag: true
+    subscription: rag
+    stream_tools: true
+  - id: checkup
+    priority: 4
+    keywords: [体检, 化验单, 指标, 转氨酶, 血脂, 血糖, 血压, 血常规, 肝功能, 肾功能]
+    tools: [checkup_interpreter]
+    use_rag: true
+    subscription: rag
+    stream_tools: false
+  - id: appointment
+    priority: 5
+    keywords: [挂什么科, 看哪个医生, 挂号, 就诊, 科室推荐]
+    tools: [appointment_guide]
+    use_rag: false
+    subscription: agent
+    stream_tools: false
+  - id: department
+    priority: 6
+    keywords: [心内科, 眼科, 骨科, 科室介绍, 皮肤科, 神经内科, 消化内科]
+    tools: [department_advisor]
+    use_rag: false
+    subscription: agent
+    stream_tools: false
+  - id: greeting
+    priority: 7
+    keywords: [你好, 谢谢, 再见, 你是谁, 早上好, 晚上好, hello, hi]
+    skip_llm: true
+    subscription: free
+    use_rag: false
+  - id: follow_up
+    priority: 8
+    keywords: [那怎么办, 能具体说说吗, 然后呢, 还有呢, 详细点, 继续]
+    use_rag: true
+    subscription: rag
+  - id: medical_query
+    priority: 9
+    keywords: []
+    use_rag: true
+    subscription: rag
+  - id: out_of_scope
+    priority: 10
+    keywords: [天气, 股票, 电影, 游戏, 做饭, 旅游]
+    skip_llm: true
+    subscription: free
+    use_rag: false
+tools:
+  - name: symptom_checker
+    class: SymptomCheckerTool
+    stream_support: true
+    description: 分析症状，提供可能的病因和建议
+  - name: drug_query
+    class: DrugQueryTool
+    stream_support: true
+    description: 查询药品信息、适应症、用法、禁忌
+  - name: emergency_detector
+    class: EmergencyDetectorTool
+    stream_support: false
+    description: 检测紧急情况，触发120提醒
+  - name: appointment_guide
+    class: AppointmentGuideTool
+    stream_support: false
+    description: 根据症状推荐挂号科室
+  - name: department_advisor
+    class: DepartmentAdvisorTool
+    stream_support: false
+    description: 介绍科室诊疗范围
+  - name: checkup_interpreter
+    class: CheckupInterpreterTool
+    stream_support: false
+    description: 解读体检报告指标
+safety:
+  blocked_keywords: [自杀, 如何自杀, 自残, 毒品, 吸毒, 过量服用]
+  emergency_keywords: [胸痛, 呼吸困难, 昏倒, 大出血, 心梗, 脑梗, 窒息, 休克]
+  emergency_response: "⚠️ 检测到紧急医疗情况！\n\n请立即采取以下行动：\n1. 拨打120急救电话\n2. 保持患者呼吸道通畅\n3. 不要随意移动患者\n4. 等待专业急救人员到达\n\n时间就是生命，请立即行动！"
+  disclaimer: "以上内容仅供参考，不能替代专业医生的诊断和治疗建议。如有不适，请及时就医。"
+prompts:
+  system: "你是一位专业的医疗健康助手「医小助」。你的职责是：\n1. 基于知识库提供准确的医疗健康信息\n2. 解读体检报告和化验指标\n3. 分析症状并提供可能的原因\n4. 推荐合适的就诊科室\n5. 提供用药参考信息\n\n重要原则：\n- 始终提醒用户：AI回答仅供参考，不能替代专业医生诊断\n- 涉及严重症状时，务必建议用户立即就医\n- 不开具处方，不推荐具体药物剂量\n- 遇到不确定的问题，诚实说明并建议咨询医生"
+  emergency: "⚠️ 检测到紧急医疗情况！\n\n请立即采取以下行动：\n1. 拨打120急救电话\n2. 保持患者呼吸道通畅\n3. 不要随意移动患者\n4. 等待专业急救人员到达\n\n时间就是生命，请立即行动！"
+  rag: "请基于以下参考资料回答用户的问题。如果参考资料中没有相关信息，请基于你的通用医学知识回答，并明确说明。\n\n参考资料：\n{context}\n\n用户问题：{query}"
+  out_of_scope: "您的问题可能与医疗健康无关。作为医疗助手，我建议您咨询相关领域的专业人士。如果您有健康方面的问题，欢迎随时向我提问。"
+welcome:
+  title: 欢迎使用医小助
+  subtitle: 专业医疗健康助手，随时为您服务
+  suggestions: [头痛怎么办？, 感冒吃什么药？, 挂什么科？, 帮我解读体检报告]

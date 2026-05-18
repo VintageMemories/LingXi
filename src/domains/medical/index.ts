@@ -1,0 +1,1 @@
+export { medicalConfig } from './config';

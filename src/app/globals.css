@@ -1,0 +1,1619 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(0.995 0.005 170);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(0.998 0.003 170);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  /* 医疗主题色：青绿 */
+  --primary: oklch(0.6 0.15 170);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.96 0.02 170);
+  --secondary-foreground: oklch(0.2 0.02 170);
+  --muted: oklch(0.96 0.01 170);
+  --muted-foreground: oklch(0.5 0.02 170);
+  --accent: oklch(0.94 0.03 170);
+  --accent-foreground: oklch(0.2 0.02 170);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.91 0.02 170);
+  --input: oklch(0.91 0.02 170);
+  --ring: oklch(0.6 0.15 170);
+  --chart-1: oklch(0.6 0.15 170);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0.01 170);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.6 0.15 170);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.94 0.03 170);
+  --sidebar-accent-foreground: oklch(0.2 0.02 170);
+  --sidebar-border: oklch(0.91 0.02 170);
+  --sidebar-ring: oklch(0.6 0.15 170);
+}
+
+.dark {
+  --background: oklch(0.1 0.012 170);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.13 0.012 170);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.14 0.012 170);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.65 0.15 170);
+  --primary-foreground: oklch(0.1 0.01 170);
+  --secondary: oklch(0.2 0.02 170);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.2 0.02 170);
+  --muted-foreground: oklch(0.65 0.02 170);
+  --accent: oklch(0.2 0.02 170);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.65 0.15 170);
+  --chart-1: oklch(0.65 0.15 170);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.12 0.01 170);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.65 0.15 170);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.2 0.02 170);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.65 0.15 170);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  /* Smooth theme transitions for major containers */
+  .theme-transitioning,
+  .theme-transitioning *,
+  .theme-transitioning *::before,
+  .theme-transitioning *::after {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+  }
+}
+
+/* 自定义滚动条 - 更纤细、平滑过渡 */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(0.8 0.03 170 / 60%);
+  border-radius: 10px;
+  transition: background 0.3s ease, opacity 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.65 0.06 170 / 80%);
+}
+
+/* 暗色模式滚动条 */
+.dark ::-webkit-scrollbar-thumb {
+  background: oklch(0.4 0.03 170 / 50%);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.06 170 / 70%);
+}
+
+/* Firefox 滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.8 0.03 170 / 60%) transparent;
+}
+
+.dark * {
+  scrollbar-color: oklch(0.4 0.03 170 / 50%) transparent;
+}
+
+/* 消息出现动画 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse-dot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.typing-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent, oklch(0.9 0.02 170 / 50%), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Markdown渲染样式 */
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  font-weight: 600;
+  margin-top: 0.75em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body h1 { font-size: 1.5em; }
+.markdown-body h2 { font-size: 1.25em; }
+.markdown-body h3 { font-size: 1.1em; }
+
+.markdown-body ul, .markdown-body ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.markdown-body li {
+  margin: 0.25em 0;
+}
+
+.markdown-body p {
+  margin: 0.5em 0;
+  line-height: 1.7;
+}
+
+.markdown-body strong {
+  font-weight: 600;
+}
+
+/* Inline code */
+.markdown-body .markdown-inline-code {
+  background: oklch(0.95 0.02 170);
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: oklch(0.4 0.08 170);
+}
+
+.dark .markdown-body .markdown-inline-code {
+  background: oklch(0.25 0.02 170);
+  color: oklch(0.75 0.05 170);
+}
+
+/* Code blocks */
+.markdown-body .markdown-pre {
+  background: oklch(0.97 0.01 170);
+  border: 1px solid oklch(0.91 0.02 170);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+
+.dark .markdown-body .markdown-pre {
+  background: oklch(0.18 0.01 170);
+  border-color: oklch(1 0 0 / 10%);
+}
+
+/* Tables */
+.markdown-body .markdown-table-wrapper {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  border: 1px solid oklch(0.91 0.02 170);
+}
+
+.dark .markdown-body .markdown-table-wrapper {
+  border-color: oklch(1 0 0 / 10%);
+}
+
+.markdown-body .markdown-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.875em;
+}
+
+.markdown-body .markdown-table thead {
+  background: oklch(0.96 0.02 170);
+}
+
+.dark .markdown-body .markdown-table thead {
+  background: oklch(0.22 0.02 170);
+}
+
+.markdown-body .markdown-table th,
+.markdown-body .markdown-table td {
+  border: 1px solid oklch(0.91 0.02 170);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.dark .markdown-body .markdown-table th,
+.dark .markdown-body .markdown-table td {
+  border-color: oklch(1 0 0 / 10%);
+}
+
+/* Striped rows */
+.markdown-body .markdown-table tbody tr:nth-child(even) {
+  background: oklch(0.97 0.01 170);
+}
+
+.dark .markdown-body .markdown-table tbody tr:nth-child(even) {
+  background: oklch(0.15 0.01 170);
+}
+
+.markdown-body .markdown-table tbody tr:hover {
+  background: oklch(0.94 0.03 170);
+}
+
+.dark .markdown-body .markdown-table tbody tr:hover {
+  background: oklch(0.22 0.02 170);
+}
+
+/* Horizontal rule */
+.markdown-body .markdown-hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    oklch(0.6 0.15 170 / 30%),
+    transparent
+  );
+  margin: 1.5rem 0;
+}
+
+.dark .markdown-body .markdown-hr {
+  background: linear-gradient(
+    to right,
+    transparent,
+    oklch(0.65 0.15 170 / 25%),
+    transparent
+  );
+}
+
+/* Blockquote */
+.markdown-body .markdown-blockquote {
+  border-left: 3px solid oklch(0.6 0.15 170);
+  padding-left: 0.75em;
+  margin: 0.5em 0;
+  color: oklch(0.45 0.02 170);
+  font-style: italic;
+}
+
+.dark .markdown-body .markdown-blockquote {
+  border-left-color: oklch(0.65 0.15 170);
+  color: oklch(0.65 0.02 170);
+}
+
+/* Nested lists */
+.markdown-body .markdown-list ul,
+.markdown-body .markdown-list ol {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  padding-left: 1.25em;
+}
+
+.markdown-body .markdown-list li {
+  margin: 0.15em 0;
+}
+
+/* 新增动画 */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.6 0.15 170 / 20%); }
+  50% { box-shadow: 0 0 20px 4px oklch(0.6 0.15 170 / 15%); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes ring-pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+@keyframes subtle-glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2.5s ease-in-out infinite;
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.animate-ring-pulse {
+  animation: ring-pulse 2s ease-out infinite;
+}
+
+.animate-subtle-glow {
+  animation: subtle-glow 2s ease-in-out infinite;
+}
+
+/* === 新增动画 === */
+
+/* 呼吸动画 - Logo图标 */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.85;
+  }
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* 消息滑入动画 */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s ease-out forwards;
+}
+
+/* 水波纹点击效果 */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, oklch(0.6 0.15 170 / 30%) 10%, transparent 10.01%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10);
+  opacity: 0;
+  transition: transform 0.5s, opacity 0.5s;
+  pointer-events: none;
+}
+
+.ripple-effect:active::after {
+  transform: scale(0);
+  opacity: 1;
+  transition: 0s;
+}
+
+/* 玻璃拟态效果 */
+.glass-morphism {
+  background: oklch(1 0 0 / 70%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid oklch(1 0 0 / 20%);
+}
+
+.dark .glass-morphism {
+  background: oklch(0.16 0.01 170 / 60%);
+  border: 1px solid oklch(1 0 0 / 8%);
+}
+
+/* 渐变文字动画 */
+@keyframes gradientText {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-text {
+  background: linear-gradient(
+    135deg,
+    oklch(0.6 0.15 170) 0%,
+    oklch(0.55 0.12 190) 25%,
+    oklch(0.6 0.15 170) 50%,
+    oklch(0.65 0.13 160) 75%,
+    oklch(0.6 0.15 170) 100%
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientText 4s ease infinite;
+}
+
+/* 欢迎页面背景动画图案 */
+@keyframes bgPatternShift {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.animate-bg-pattern {
+  background-image: radial-gradient(
+    circle at 20% 50%,
+    oklch(0.6 0.15 170 / 3%) 0%,
+    transparent 50%
+  ),
+  radial-gradient(
+    circle at 80% 20%,
+    oklch(0.55 0.12 190 / 3%) 0%,
+    transparent 50%
+  ),
+  radial-gradient(
+    circle at 40% 80%,
+    oklch(0.6 0.13 160 / 2%) 0%,
+    transparent 50%
+  );
+  background-size: 200% 200%;
+  animation: bgPatternShift 8s ease infinite;
+}
+
+/* 在线状态脉动点 */
+@keyframes pulseOnline {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.3);
+  }
+}
+
+.animate-pulse-online {
+  animation: pulseOnline 2s ease-in-out infinite;
+}
+
+/* 域切换动画 */
+@keyframes domainSwitch {
+  0% { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-domain-switch {
+  animation: domainSwitch 0.3s ease-out forwards;
+}
+
+/* 骨架屏闪烁 */
+@keyframes skeletonShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    oklch(0.93 0.01 170) 25%,
+    oklch(0.88 0.02 170) 50%,
+    oklch(0.93 0.01 170) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+.dark .animate-skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    oklch(0.22 0.02 170) 25%,
+    oklch(0.28 0.03 170) 50%,
+    oklch(0.22 0.02 170) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+/* 进度条动画 */
+@keyframes progressFill {
+  from { width: 0%; }
+}
+
+.animate-progress-fill {
+  animation: progressFill 0.8s ease-out;
+}
+
+/* === 消息气泡增强样式 === */
+
+/* AI消息悬浮光效 */
+.message-glow {
+  transition: box-shadow 0.3s ease;
+}
+.message-glow:hover {
+  box-shadow: 0 0 20px 2px oklch(0.6 0.15 170 / 8%);
+}
+
+.dark .message-glow:hover {
+  box-shadow: 0 0 20px 2px oklch(0.65 0.15 170 / 6%);
+}
+
+/* 消息弹入动画 */
+@keyframes messageBounceIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.message-enter {
+  animation: messageBounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 用户消息内阴影深度 */
+.inner-shadow-depth {
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 15%),
+    inset 0 -1px 0 oklch(0 0 0 / 10%),
+    0 4px 12px oklch(0.6 0.15 170 / 15%);
+}
+
+/* 消息间圆点分隔线 */
+.message-dot-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+.message-dot-divider::before,
+.message-dot-divider::after {
+  content: '';
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: oklch(0.6 0.15 170 / 25%);
+}
+.message-dot-divider span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: oklch(0.6 0.15 170 / 35%);
+}
+
+.dark .message-dot-divider::before,
+.dark .message-dot-divider::after {
+  background: oklch(0.65 0.15 170 / 20%);
+}
+.dark .message-dot-divider span {
+  background: oklch(0.65 0.15 170 / 30%);
+}
+
+/* 渐变动画边框 */
+@keyframes gradientBorder {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.gradient-border-animated {
+  background: linear-gradient(
+    90deg,
+    oklch(0.6 0.15 170 / 30%),
+    oklch(0.55 0.12 190 / 30%),
+    oklch(0.6 0.15 170 / 30%)
+  );
+  background-size: 200% 100%;
+  animation: gradientBorder 3s ease infinite;
+}
+
+.dark .gradient-border-animated {
+  background: linear-gradient(
+    90deg,
+    oklch(0.65 0.15 170 / 20%),
+    oklch(0.6 0.12 190 / 20%),
+    oklch(0.65 0.15 170 / 20%)
+  );
+  background-size: 200% 100%;
+  animation: gradientBorder 3s ease infinite;
+}
+
+/* === 搜索高亮样式 === */
+
+/* 搜索匹配高亮 */
+.search-highlight {
+  background: oklch(0.85 0.1 90 / 60%);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+  transition: background 0.2s ease;
+}
+
+.dark .search-highlight {
+  background: oklch(0.4 0.08 90 / 40%);
+}
+
+/* 当前搜索匹配高亮 */
+.search-highlight-current {
+  background: oklch(0.82 0.15 80 / 80%);
+  color: oklch(0.25 0.05 80);
+  box-shadow: 0 0 0 2px oklch(0.82 0.15 80 / 40%);
+}
+
+.dark .search-highlight-current {
+  background: oklch(0.7 0.15 80 / 70%);
+  color: oklch(0.15 0.02 80);
+  box-shadow: 0 0 0 2px oklch(0.7 0.15 80 / 30%);
+}
+
+/* 搜索高亮闪烁动画 */
+.search-highlight-active {
+  animation: highlightFlash 1.5s ease-out;
+}
+
+@keyframes highlightFlash {
+  0% {
+    background: oklch(0.75 0.2 80 / 90%);
+    box-shadow: 0 0 8px 2px oklch(0.82 0.15 80 / 50%);
+  }
+  100% {
+    background: oklch(0.82 0.15 80 / 80%);
+    box-shadow: none;
+  }
+}
+
+.dark .search-highlight-active {
+  animation: highlightFlashDark 1.5s ease-out;
+}
+
+@keyframes highlightFlashDark {
+  0% {
+    background: oklch(0.65 0.2 80 / 90%);
+    box-shadow: 0 0 8px 2px oklch(0.7 0.15 80 / 50%);
+  }
+  100% {
+    background: oklch(0.7 0.15 80 / 70%);
+    box-shadow: none;
+  }
+}
+
+/* === 新增微交互动画 === */
+
+/* 消息发送 whoosh 效果 */
+@keyframes messageWhoosh {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    filter: blur(2px);
+  }
+  50% {
+    opacity: 0.8;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.animate-message-whoosh {
+  animation: messageWhoosh 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 置顶/取消置顶弹跳效果 */
+@keyframes pinBounce {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.3); }
+  50% { transform: scale(0.9); }
+  75% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.animate-pin-bounce {
+  animation: pinBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 置顶下落效果 */
+@keyframes pinDrop {
+  0% { transform: translateY(-10px); opacity: 0; }
+  60% { transform: translateY(2px); opacity: 1; }
+  80% { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
+}
+
+.animate-pin-drop {
+  animation: pinDrop 0.4s ease-out;
+}
+
+/* 收藏星爆效果 */
+@keyframes starBurst {
+  0% { transform: scale(0.5) rotate(-30deg); opacity: 0; }
+  40% { transform: scale(1.3) rotate(5deg); opacity: 1; }
+  60% { transform: scale(0.9) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.animate-star-burst {
+  animation: starBurst 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 增强打字指示器 - 渐变色弹跳点 */
+@keyframes typingBounceEnhanced {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.typing-dot-enhanced {
+  animation: typingBounceEnhanced 1.4s ease-in-out infinite;
+  border-radius: 50%;
+}
+
+.typing-dot-enhanced:nth-child(1) {
+  animation-delay: 0s;
+  background: oklch(0.6 0.15 170);
+}
+.typing-dot-enhanced:nth-child(2) {
+  animation-delay: 0.2s;
+  background: oklch(0.55 0.12 190);
+}
+.typing-dot-enhanced:nth-child(3) {
+  animation-delay: 0.4s;
+  background: oklch(0.65 0.13 160);
+}
+
+.dark .typing-dot-enhanced:nth-child(1) {
+  background: oklch(0.65 0.15 170);
+}
+.dark .typing-dot-enhanced:nth-child(2) {
+  background: oklch(0.6 0.12 190);
+}
+.dark .typing-dot-enhanced:nth-child(3) {
+  background: oklch(0.7 0.13 160);
+}
+
+/* 侧边栏悬浮左边框滑入 */
+@keyframes borderSlideIn {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 2px;
+    opacity: 1;
+  }
+}
+
+.sidebar-item-hover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 0;
+  border-radius: 1px;
+  background: oklch(0.6 0.15 170);
+  transition: width 0.2s ease, opacity 0.2s ease;
+  opacity: 0;
+}
+
+.sidebar-item-hover:hover::before {
+  width: 2px;
+  opacity: 1;
+}
+
+/* 设置标签下划线滑动动画 */
+@keyframes underlineSlide {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.tabs-underline-animated {
+  position: relative;
+}
+
+.tabs-underline-animated::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: oklch(0.6 0.15 170);
+  border-radius: 1px;
+  transform: scaleX(0);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-state="active"].tabs-underline-animated::after {
+  transform: scaleX(1);
+}
+
+/* Toast 通知 - 顶部滑入 + 弹跳 */
+@keyframes toastSlideIn {
+  0% {
+    transform: translateY(-100%) scale(0.9);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(8px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-toast-in {
+  animation: toastSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 头部按钮组发光效果 */
+.header-btn-glow {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.header-btn-glow:hover {
+  text-shadow: 0 0 8px oklch(0.6 0.15 170 / 30%);
+}
+
+.header-btn-glow::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  opacity: 0;
+  box-shadow: 0 0 12px 2px oklch(0.6 0.15 170 / 20%);
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.header-btn-glow:hover::after {
+  opacity: 1;
+}
+
+.dark .header-btn-glow::after {
+  box-shadow: 0 0 12px 2px oklch(0.65 0.15 170 / 15%);
+}
+
+/* === 欢迎页面粒子背景 === */
+@keyframes particleFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.15; }
+  25% { transform: translate(30px, -20px) scale(1.1); opacity: 0.25; }
+  50% { transform: translate(-10px, -40px) scale(0.9); opacity: 0.15; }
+  75% { transform: translate(-30px, -10px) scale(1.05); opacity: 0.2; }
+}
+
+@keyframes particleFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.1; }
+  33% { transform: translate(-20px, -30px) scale(1.15); opacity: 0.2; }
+  66% { transform: translate(25px, -15px) scale(0.95); opacity: 0.15; }
+}
+
+@keyframes particleFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.12; }
+  50% { transform: translate(15px, -35px) scale(1.1); opacity: 0.2; }
+}
+
+.particle-dots::before,
+.particle-dots::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: oklch(0.6 0.15 170);
+}
+
+.particle-dots::before {
+  width: 6px;
+  height: 6px;
+  top: 20%;
+  left: 15%;
+  animation: particleFloat1 8s ease-in-out infinite;
+}
+
+.particle-dots::after {
+  width: 4px;
+  height: 4px;
+  top: 60%;
+  right: 20%;
+  animation: particleFloat2 10s ease-in-out infinite;
+}
+
+.particle-dots {
+  position: relative;
+}
+
+/* Additional dots via box-shadow technique */
+.particle-dots {
+  width: 3px;
+  height: 3px;
+  background: transparent;
+  box-shadow:
+    10vw 15vh 0 2px oklch(0.6 0.15 170 / 12%),
+    25vw 8vh 0 1px oklch(0.55 0.12 190 / 10%),
+    40vw 70vh 0 3px oklch(0.6 0.13 160 / 8%),
+    55vw 25vh 0 2px oklch(0.6 0.15 170 / 14%),
+    70vw 55vh 0 1px oklch(0.55 0.12 190 / 10%),
+    85vw 12vh 0 2px oklch(0.6 0.13 160 / 12%),
+    15vw 80vh 0 1px oklch(0.6 0.15 170 / 8%),
+    60vw 40vh 0 3px oklch(0.55 0.12 190 / 10%),
+    90vw 75vh 0 1px oklch(0.6 0.13 160 / 14%),
+    35vw 45vh 0 2px oklch(0.6 0.15 170 / 10%),
+    75vw 30vh 0 1px oklch(0.55 0.12 190 / 12%),
+    5vw 55vh 0 2px oklch(0.6 0.13 160 / 8%);
+  animation: particleFloat3 12s ease-in-out infinite;
+}
+
+/* === TTS 音频波形动画 === */
+@keyframes audioWave1 {
+  0%, 100% { height: 3px; }
+  50% { height: 10px; }
+}
+@keyframes audioWave2 {
+  0%, 100% { height: 6px; }
+  50% { height: 14px; }
+}
+@keyframes audioWave3 {
+  0%, 100% { height: 4px; }
+  50% { height: 12px; }
+}
+
+.tts-wave-bar {
+  display: inline-block;
+  width: 2px;
+  border-radius: 1px;
+  background: oklch(0.6 0.15 170);
+  animation-duration: 0.8s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.tts-wave-bar:nth-child(1) { animation-name: audioWave1; animation-delay: 0s; }
+.tts-wave-bar:nth-child(2) { animation-name: audioWave2; animation-delay: 0.15s; }
+.tts-wave-bar:nth-child(3) { animation-name: audioWave3; animation-delay: 0.3s; }
+.tts-wave-bar:nth-child(4) { animation-name: audioWave1; animation-delay: 0.1s; }
+.tts-wave-bar:nth-child(5) { animation-name: audioWave2; animation-delay: 0.25s; }
+
+.dark .tts-wave-bar {
+  background: oklch(0.65 0.15 170);
+}
+
+/* === 打印样式 (PDF导出) === */
+@media print {
+  /* 隐藏所有 UI 元素 */
+  body > *:not(.print-container) {
+    display: none !important;
+  }
+
+  /* 强制浅色模式 */
+  body {
+    background: white !important;
+    color: #1a1a1a !important;
+  }
+
+  /* 打印容器样式 */
+  .print-container {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    color: #1a1a1a !important;
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+  }
+
+  .print-container * {
+    color: inherit !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* 打印头部 */
+  .print-header {
+    border-bottom: 2px solid #0d9488 !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .print-header h1 {
+    font-size: 18pt !important;
+    font-weight: 700 !important;
+    margin: 0 0 4px 0 !important;
+    color: #0d9488 !important;
+  }
+
+  .print-header .print-meta {
+    font-size: 9pt !important;
+    color: #666 !important;
+    margin: 2px 0 !important;
+  }
+
+  /* 消息样式 */
+  .print-message {
+    margin-bottom: 16px !important;
+    padding: 10px 12px !important;
+    border-radius: 8px !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-message.user {
+    background: #f0fdfa !important;
+    border-left: 3px solid #0d9488 !important;
+  }
+
+  .print-message.assistant {
+    background: #f9fafb !important;
+    border-left: 3px solid #94a3b8 !important;
+  }
+
+  .print-message .print-role {
+    font-weight: 600 !important;
+    font-size: 10pt !important;
+    margin-bottom: 4px !important;
+  }
+
+  .print-message .print-role.user-role {
+    color: #0d9488 !important;
+  }
+
+  .print-message .print-role.ai-role {
+    color: #475569 !important;
+  }
+
+  .print-message .print-time {
+    font-size: 8pt !important;
+    color: #999 !important;
+  }
+
+  .print-message .print-content {
+    font-size: 11pt !important;
+    line-height: 1.7 !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+  }
+
+  .print-message .print-intent {
+    display: inline-block !important;
+    font-size: 8pt !important;
+    background: #f0fdfa !important;
+    border: 1px solid #99f6e4 !important;
+    border-radius: 4px !important;
+    padding: 1px 6px !important;
+    margin-top: 4px !important;
+    color: #0d9488 !important;
+  }
+
+  .print-message .print-sources {
+    font-size: 8pt !important;
+    color: #666 !important;
+    margin-top: 6px !important;
+    border-top: 1px dashed #e2e8f0 !important;
+    padding-top: 4px !important;
+  }
+
+  /* 页脚页码 */
+  .print-footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    text-align: center !important;
+    font-size: 8pt !important;
+    color: #999 !important;
+    padding: 8px 0 !important;
+    border-top: 1px solid #e2e8f0 !important;
+  }
+
+  /* 分隔线 */
+  .print-divider {
+    border: none !important;
+    height: 1px !important;
+    background: #e2e8f0 !important;
+    margin: 16px 0 !important;
+  }
+
+  /* 页面设置 */
+  @page {
+    margin: 1.5cm 2cm;
+    size: A4;
+  }
+}
+
+/* === 10 UI Polish Improvements === */
+
+/* 1. Chat Header Animated Gradient Line */
+@keyframes headerGradientShift {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 50% 0%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 100%; }
+  100% { background-position: 0% 50%; }
+}
+
+.header-gradient-line {
+  background: linear-gradient(
+    90deg,
+    oklch(0.6 0.15 170 / 40%),
+    oklch(0.55 0.12 190 / 50%),
+    oklch(0.65 0.13 160 / 40%),
+    oklch(0.6 0.15 170 / 50%),
+    oklch(0.55 0.12 190 / 40%)
+  );
+  background-size: 300% 100%;
+  animation: headerGradientShift 6s ease infinite;
+}
+
+.dark .header-gradient-line {
+  background: linear-gradient(
+    90deg,
+    oklch(0.65 0.15 170 / 25%),
+    oklch(0.6 0.12 190 / 30%),
+    oklch(0.7 0.13 160 / 25%),
+    oklch(0.65 0.15 170 / 30%),
+    oklch(0.6 0.12 190 / 25%)
+  );
+  background-size: 300% 100%;
+  animation: headerGradientShift 6s ease infinite;
+}
+
+/* 2. Message Hover Left Border Glow */
+.message-hover-glow {
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.message-hover-glow::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: oklch(0.6 0.15 170);
+  opacity: 0;
+  box-shadow: 0 0 8px 2px oklch(0.6 0.15 170 / 30%);
+  transition: opacity 0.25s ease, box-shadow 0.25s ease;
+}
+
+.message-hover-glow:hover::before {
+  opacity: 0.7;
+  box-shadow: 0 0 12px 3px oklch(0.6 0.15 170 / 25%);
+}
+
+.dark .message-hover-glow::before {
+  background: oklch(0.65 0.15 170);
+  box-shadow: 0 0 8px 2px oklch(0.65 0.15 170 / 20%);
+}
+
+.dark .message-hover-glow:hover::before {
+  opacity: 0.6;
+  box-shadow: 0 0 12px 3px oklch(0.65 0.15 170 / 18%);
+}
+
+/* 3. Sidebar Custom Thin Scrollbar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: oklch(0.7 0.03 170 / 30%);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.6 0.06 170 / 50%);
+}
+
+.dark .sidebar-scroll::-webkit-scrollbar-thumb {
+  background: oklch(0.4 0.03 170 / 30%);
+}
+
+.dark .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.06 170 / 50%);
+}
+
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.7 0.03 170 / 30%) transparent;
+}
+
+.dark .sidebar-scroll {
+  scrollbar-color: oklch(0.4 0.03 170 / 30%) transparent;
+}
+
+/* 4. Input Focus Ring Pulsing Animation */
+@keyframes focusRingPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 oklch(0.6 0.15 170 / 25%);
+  }
+  50% {
+    box-shadow: 0 0 0 4px oklch(0.6 0.15 170 / 12%);
+  }
+}
+
+.input-focus-pulse:focus-within {
+  animation: focusRingPulse 2s ease-in-out infinite;
+}
+
+/* 5. Toast Notification Enhanced Styling */
+.toast-enhanced {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.toast-enhanced::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    oklch(0.6 0.15 170 / 40%),
+    oklch(0.55 0.12 190 / 30%),
+    oklch(0.65 0.13 160 / 40%)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.dark .toast-enhanced::before {
+  background: linear-gradient(
+    135deg,
+    oklch(0.65 0.15 170 / 25%),
+    oklch(0.6 0.12 190 / 20%),
+    oklch(0.7 0.13 160 / 25%)
+  );
+}
+
+/* 6. Empty State CSS Illustration */
+.empty-state-illustration {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+}
+
+.empty-state-illustration::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  border: 2.5px solid oklch(0.6 0.15 170 / 30%);
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.empty-state-illustration::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  width: 4px;
+  height: 20px;
+  background: oklch(0.6 0.15 170 / 30%);
+  border-radius: 2px;
+}
+
+.dark .empty-state-illustration::before {
+  border-color: oklch(0.65 0.15 170 / 25%);
+}
+
+.dark .empty-state-illustration::after {
+  background: oklch(0.65 0.15 170 / 25%);
+}
+
+/* Small floating dots around the illustration */
+@keyframes emptyDotFloat {
+  0%, 100% { transform: translateY(0); opacity: 0.3; }
+  50% { transform: translateY(-4px); opacity: 0.6; }
+}
+
+.empty-state-illustration .dot-1,
+.empty-state-illustration .dot-2,
+.empty-state-illustration .dot-3 {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: oklch(0.6 0.15 170 / 25%);
+  animation: emptyDotFloat 3s ease-in-out infinite;
+}
+
+.empty-state-illustration .dot-1 { top: 8px; left: 16px; animation-delay: 0s; }
+.empty-state-illustration .dot-2 { top: 20px; right: 8px; animation-delay: 1s; }
+.empty-state-illustration .dot-3 { bottom: 12px; left: 24px; animation-delay: 2s; }
+
+/* 7. Enhanced Loading Skeleton Shimmer */
+.skeleton-shimmer-enhanced {
+  background: linear-gradient(
+    110deg,
+    oklch(0.94 0.01 170) 0%,
+    oklch(0.94 0.01 170) 40%,
+    oklch(0.88 0.02 170) 50%,
+    oklch(0.94 0.01 170) 60%,
+    oklch(0.94 0.01 170) 100%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.dark .skeleton-shimmer-enhanced {
+  background: linear-gradient(
+    110deg,
+    oklch(0.22 0.02 170) 0%,
+    oklch(0.22 0.02 170) 40%,
+    oklch(0.28 0.03 170) 50%,
+    oklch(0.22 0.02 170) 60%,
+    oklch(0.22 0.02 170) 100%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* 8. Scroll-to-Bottom Button Shadow + Bounce */
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.scroll-to-bottom-btn {
+  box-shadow: 0 4px 14px -2px oklch(0.6 0.15 170 / 25%),
+              0 2px 6px oklch(0 0 0 / 10%);
+  animation: scrollBounce 2s ease-in-out infinite;
+}
+
+.scroll-to-bottom-btn:hover {
+  animation: none;
+  box-shadow: 0 6px 20px -2px oklch(0.6 0.15 170 / 35%),
+              0 2px 8px oklch(0 0 0 / 12%);
+}
+
+.dark .scroll-to-bottom-btn {
+  box-shadow: 0 4px 14px -2px oklch(0.65 0.15 170 / 20%),
+              0 2px 6px oklch(0 0 0 / 20%);
+}
+
+.dark .scroll-to-bottom-btn:hover {
+  box-shadow: 0 6px 20px -2px oklch(0.65 0.15 170 / 30%),
+              0 2px 8px oklch(0 0 0 / 25%);
+}
+
+/* 9. Theme Toggle Spin Animation */
+@keyframes themeToggleSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(0.8); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.theme-toggle-spinning svg {
+  animation: themeToggleSpin 0.5s ease-in-out;
+}
+
+/* 10. Settings Dialog Scale+Fade Entrance */
+@keyframes dialogScaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dialog-entrance {
+  animation: dialogScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dialog-entrance-overlay {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* === Chat Area Subtle Background Pattern === */
+.chat-area-bg {
+  background-image:
+    radial-gradient(ellipse at 20% 0%, oklch(0.6 0.15 170 / 3%) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, oklch(0.55 0.12 190 / 2%) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, oklch(0.6 0.13 160 / 1%) 0%, transparent 70%);
+}
+
+.dark .chat-area-bg {
+  background-image:
+    radial-gradient(ellipse at 20% 0%, oklch(0.65 0.15 170 / 4%) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, oklch(0.6 0.12 190 / 3%) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, oklch(0.7 0.13 160 / 2%) 0%, transparent 70%);
+}
+
+/* Subtle dot grid pattern for chat area */
+.chat-dot-pattern {
+  background-image: radial-gradient(circle, oklch(0.6 0.15 170 / 4%) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .chat-dot-pattern {
+  background-image: radial-gradient(circle, oklch(0.65 0.15 170 / 3%) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* === Unified Chat Input Container === */
+.chat-input-container {
+  border-radius: 16px;
+  border: 1px solid oklch(0.91 0.02 170 / 60%);
+  background: oklch(0.995 0.003 170 / 80%);
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chat-input-container:focus-within {
+  border-color: oklch(0.6 0.15 170 / 40%);
+  box-shadow: 0 0 0 3px oklch(0.6 0.15 170 / 10%);
+}
+
+.dark .chat-input-container {
+  border-color: oklch(1 0 0 / 10%);
+  background: oklch(0.14 0.012 170 / 80%);
+}
+
+.dark .chat-input-container:focus-within {
+  border-color: oklch(0.65 0.15 170 / 30%);
+  box-shadow: 0 0 0 3px oklch(0.65 0.15 170 / 8%);
+}
+
+/* Separator between textarea and toolbar */
+.input-toolbar-separator {
+  border-top: 1px solid oklch(0.91 0.02 170 / 40%);
+}
+
+.dark .input-toolbar-separator {
+  border-top-color: oklch(1 0 0 / 6%);
+}

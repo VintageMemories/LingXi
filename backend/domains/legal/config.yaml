@@ -1,0 +1,86 @@
+id: legal
+name: 法小助
+display_name: 法律咨询助手
+icon: ⚖️
+theme: legal
+description: 专业法律咨询服务
+intents:
+  - id: emergency
+    priority: 0
+    keywords: [拘留, 逮捕, 紧急]
+    skip_llm: true
+    subscription: free
+    use_rag: false
+  - id: contract_review
+    priority: 1
+    keywords: [合同, 协议, 条款, 违约, 合同纠纷]
+    tools: [contract_review]
+    use_rag: true
+    subscription: rag
+    stream_tools: true
+  - id: labor_dispute
+    priority: 2
+    keywords: [劳动法, 辞退, 加班费, 工伤, 劳动合同]
+    tools: [labor_dispute]
+    use_rag: true
+    subscription: rag
+    stream_tools: true
+  - id: property_dispute
+    priority: 3
+    keywords: [房产, 离婚, 继承, 财产分割, 遗嘱]
+    tools: [property_dispute]
+    use_rag: true
+    subscription: agent
+  - id: criminal_defense
+    priority: 4
+    keywords: [刑事, 逮捕, 取保候审, 辩护]
+    tools: [criminal_defense]
+    use_rag: true
+    subscription: agent
+  - id: greeting
+    priority: 7
+    keywords: [你好, 谢谢, 再见, 你是谁]
+    skip_llm: true
+    subscription: free
+    use_rag: false
+  - id: legal_query
+    priority: 9
+    keywords: []
+    use_rag: true
+    subscription: rag
+  - id: out_of_scope
+    priority: 10
+    keywords: [天气, 股票, 游戏]
+    skip_llm: true
+    subscription: free
+    use_rag: false
+tools:
+  - name: contract_review
+    class: ContractReviewTool
+    stream_support: true
+    description: 审查合同条款，提示风险
+  - name: labor_dispute
+    class: LaborDisputeTool
+    stream_support: true
+    description: 分析劳动纠纷，提供法律建议
+  - name: property_dispute
+    class: PropertyDisputeTool
+    stream_support: false
+    description: 处理房产、离婚、继承纠纷
+  - name: criminal_defense
+    class: CriminalDefenseTool
+    stream_support: false
+    description: 刑事辩护咨询
+safety:
+  blocked_keywords: [怎么报复, 如何行贿, 伪造证据, 毁灭证据]
+  emergency_keywords: [拘留, 逮捕, 紧急]
+  emergency_response: "⚠️ 检测到紧急法律情况！建议您立即联系律师或拨打法律援助热线。"
+  disclaimer: "以上内容仅供参考，不构成法律意见。重大法律决策请咨询专业律师。"
+prompts:
+  system: "你是一位专业的法律咨询助手「法小助」。你的职责是：\n1. 基于法律法规提供法律信息\n2. 分析法律风险\n3. 提供法律建议\n\n重要原则：\n- 始终提醒：AI回答仅供参考，不构成法律意见\n- 建议重大决策咨询专业律师\n- 不提供违法建议"
+  rag: "请基于以下法律参考资料回答用户的问题：\n\n参考资料：\n{context}\n\n用户问题：{query}"
+  out_of_scope: "您的问题可能与法律咨询无关。作为法律助手，我建议您咨询相关领域的专业人士。"
+welcome:
+  title: 欢迎使用法小助
+  subtitle: 专业法律咨询助手，为您解答法律疑惑
+  suggestions: [合同纠纷怎么处理？, 劳动法关于加班的规定？, 离婚财产怎么分割？, 刑事拘留怎么办？]

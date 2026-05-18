@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String
+  plan          String    @default("free")
+  avatar        String?
+  devMode       Boolean   @default(false)
+  dailyUsage    Int       @default(0)
+  lastUsageDate String?
+  sessions      Session[]
+  feedbacks     Feedback[]
+  profile       UserProfile?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model UserProfile {
+  id        String  @id @default(cuid())
+  userId    String  @unique
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age       Int?
+  gender    String?
+  allergies String?
+  history   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  domain    String    @default("medical")
+  title     String?
+  tags      String?
+  messages  Message[]
+  feedbacks Feedback[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id              String   @id @default(cuid())
+  sessionId       String
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role            String
+  content         String
+  intent          String?
+  model           String?
+  sources         String?
+  feedbackRating  Int?
+  feedbackComment String?
+  createdAt       DateTime @default(now())
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  messageId String?
+  rating    Int
+  comment   String?
+  query     String?
+  response  String?
+  intent    String?
+  domain    String?
+  createdAt DateTime @default(now())
+}
+
+model KnowledgeEntry {
+  id          String   @id @default(cuid())
+  domain      String
+  source      String
+  title       String
+  content     String
+  category    String?
+  summary     String?
+  etiology    String?
+  symptoms    String?
+  diagnosis   String?
+  treatment   String?
+  prevention  String?
+  fingerprint String?
+  vectorId    String?
+  sourceUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([domain, source])
+  @@index([domain, category])
+  @@unique([domain, source, fingerprint])
+}
+
+model DomainConfig {
+  id          String   @id @default(cuid())
+  domainId    String   @unique
+  name        String
+  displayName String
+  icon        String
+  description String
+  theme       String   @default("medical")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  configJson  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Share {
+  id        String   @id @default(cuid())
+  shareCode String   @unique
+  sessionId String
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+}
