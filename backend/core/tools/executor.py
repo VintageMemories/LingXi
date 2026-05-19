@@ -9,7 +9,7 @@ class ToolExecutor:
         self.domain_config = domain_config
         self.tools = {t["name"]: t for t in domain_config.get("tools", [])}
 
-    async def execute(self, tool_name: str, query: str) -> Dict[str, Any]:
+    def execute(self, tool_name: str, query: str) -> Dict[str, Any]:
         if tool_name not in self.tools:
             return {"success": False, "data": f"Tool '{tool_name}' not found", "tool": tool_name}
 

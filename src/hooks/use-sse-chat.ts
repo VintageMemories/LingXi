@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef } from 'react'
-import { useChatStore, type ChatMessage, type TokenUsage, estimateCost } from '@/stores/chat-store'
+import { useChatStore, type ChatMessage, type TokenUsage } from '@/stores/chat-store'
 
 let messageIdCounter = 0
 function generateId(): string {
@@ -60,8 +60,6 @@ export function useSSEChat() {
         }
         addMessage(userMsg)
 
-        useChatStore.getState().incrementUsage()
-
         const assistantId = generateId()
         const assistantMsg: ChatMessage = {
           id: assistantId,
@@ -85,6 +83,7 @@ export function useSSEChat() {
 
         try {
           const settings = useChatStore.getState().settings
+          console.log('[sendMessage] 准备 fetch /api/chat')
           const response = await fetch('/api/chat', {
             method: 'POST',
             headers: {
@@ -93,6 +92,7 @@ export function useSSEChat() {
               'X-API-Key': settings.apiKey,
               'X-API-Base-URL': settings.apiBaseUrl,
               'X-API-Provider': settings.apiProvider,
+              'X-User-Plan': useChatStore.getState().user?.plan || 'free',
             },
             body: JSON.stringify({
               message: content.trim(),
@@ -102,6 +102,7 @@ export function useSSEChat() {
             }),
             signal: abortControllerRef.current.signal,
           })
+          console.log('[sendMessage] fetch 完成, status:', response.status)
 
           if (!response.ok) {
             updateMessage(assistantId, {
@@ -195,27 +196,38 @@ export function useSSEChat() {
                       promptTokens,
                       completionTokens,
                       totalTokens: promptTokens + completionTokens,
-                      estimatedCost: estimateCost(promptTokens, completionTokens, model),
                     }
+                    const fromLLM = event.from_llm === true
                     updateMessage(assistantId, {
                       isStreaming: false,
                       intent: event.intent,
                       confidence: event.confidence,
                       sources: event.sources || [],
                       sourceHint: event.source_hint || null,
-                      tokenUsage,
+                      tokenUsage: fromLLM ? tokenUsage : undefined,
                     })
-                    useChatStore.getState().addTokenUsage({
-                      promptTokens,
-                      completionTokens,
-                      model,
-                    })
-                    if (event.session_id) {
-                      console.log('[SSE] 收到 session_id:', event.session_id)
-                      setSessionId(event.session_id)
+                    if (fromLLM) {
+                      useChatStore.getState().addTokenUsage({
+                        promptTokens,
+                        completionTokens,
+                        model,
+                      })
                     }
+
+                    const newSessionId = event.session_id
+                    if (newSessionId) {
+                      const domain = useChatStore.getState().currentDomain?.id || 'medical'
+                      const title = content.trim().slice(0, 20) + (content.trim().length > 20 ? '...' : '')
+                      fetch('/api/sessions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ domain, title, session_id: newSessionId }),
+                      }).then(() => {
+                        setSessionId(newSessionId)
+                      })
+                    }
+
                     setIsStreaming(false)
-                    // 加这一行：回复完成后刷新会话列表
                     setTimeout(() => { useChatStore.getState().refreshSessions() }, 500)
                     break
                   }

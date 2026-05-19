@@ -20,7 +20,7 @@ class DomainManager:
 
     def _load_all(self):
         """Load all domain YAML files from the domains directory."""
-        domains_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "domains")
+        domains_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "domains")
         if not os.path.isdir(domains_dir):
             return
 

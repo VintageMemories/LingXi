@@ -8,8 +8,8 @@ import { db } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
     try {
-        const { domain, title } = await request.json();
-        const sessionId = await createSession(domain || 'medical', title || undefined);
+        const { domain, title, session_id } = await request.json();
+        const sessionId = await createSession(domain || 'medical', title || undefined, session_id || undefined);
 
         return Response.json({
             session_id: sessionId,

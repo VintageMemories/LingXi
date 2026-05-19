@@ -441,34 +441,54 @@ export function ConversationSidebar() {
           <h2 className="text-sm font-semibold tracking-tight">{t('sidebar.chatHistory')}</h2>
           <div className="flex items-center gap-1">
             {isBatchMode ? (
-                <>
-                  <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs text-red-500 hover:bg-red-500/10"
-                      onClick={handleBatchDelete}
-                      disabled={selectedIds.size === 0}
+                <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 -mr-1">
+                  <h2
+                      className="text-sm font-semibold tracking-tight cursor-pointer hover:text-primary transition-colors w-16"
+                      onClick={() => {
+                        setSelectedIds(prev => {
+                          const allIds = new Set(filteredSessions.map(s => s.id))
+                          if (prev.size === allIds.size) return new Set()
+                          return allIds
+                        })
+                      }}
                   >
-                    {t('sidebar.deleteSelected')} ({selectedIds.size})
-                  </Button>
-                  <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
+                    {selectedIds.size === filteredSessions.length ? '取消全选' : '全选'}
+                  </h2>
+                  <h2
+                      className="text-sm font-semibold tracking-tight cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => {
+                        setSelectedIds(prev => {
+                          const allIds = new Set(filteredSessions.map(s => s.id))
+                          const inverted = new Set<string>()
+                          allIds.forEach(id => {
+                            if (!prev.has(id)) inverted.add(id)
+                          })
+                          return inverted
+                        })
+                      }}
+                  >
+                    反选
+                  </h2>
+                  <h2
+                      className={`text-sm font-semibold tracking-tight cursor-pointer transition-colors ${selectedIds.size === 0 ? 'text-muted-foreground/30 pointer-events-none' : 'text-red-500 hover:text-red-400'}`}
+                      onClick={selectedIds.size === 0 ? undefined : handleBatchDelete}
+                  >
+                    删除({selectedIds.size})
+                  </h2>
+                  <h2
+                      className="text-sm font-semibold tracking-tight cursor-pointer hover:text-primary transition-colors"
                       onClick={() => { setSelectedIds(new Set()); setIsBatchMode(false) }}
                   >
-                    {t('sidebar.cancel')}
-                  </Button>
-                </>
+                    取消
+                  </h2>
+                </div>
             ) : (
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs"
+                <h2
+                    className="text-sm font-semibold tracking-tight cursor-pointer hover:text-primary transition-colors"
                     onClick={() => setIsBatchMode(true)}
                 >
                   {t('sidebar.batchDelete')}
-                </Button>
+                </h2>
             )}
             <Button
                 variant="ghost"

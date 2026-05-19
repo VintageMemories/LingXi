@@ -1,9 +1,10 @@
 'use client'
 
 import { useTheme } from 'next-themes'
-import { Sun, Moon, PanelLeftOpen, PanelLeftClose, Plus, Sparkles, LogOut, User as UserIcon, Settings, Info, Keyboard } from 'lucide-react'
+import { Sun, Moon, PanelLeftOpen, PanelLeftClose, Plus, Sparkles, LogOut, User as UserIcon, Settings, Info, Keyboard, Crown, Key } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -178,6 +179,17 @@ export function ChatHeader() {
                                     <DropdownMenuItem className="cursor-pointer" onClick={() => setIsSettingsOpen(true)}>
                                         <UserIcon className="mr-2 h-4 w-4" />
                                         {t('header.profile')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="cursor-pointer" onClick={() => useChatStore.getState().setIsSubscriptionOpen(true)}>
+                                        <Crown className="mr-2 h-4 w-4" />
+                                        订阅方案
+                                        <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">
+                                            {user.plan === 'agent' ? 'Agent版' : user.plan === 'pro' ? 'Pro版' : '免费版'}
+                                        </Badge>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="cursor-pointer" onClick={() => useChatStore.getState().setIsActivateOpen(true)}>
+                                        <Key className="mr-2 h-4 w-4" />
+                                        激活码
                                     </DropdownMenuItem>
                                     <DropdownMenuItem className="cursor-pointer" onClick={() => setIsAboutOpen(true)}>
                                         <Info className="mr-2 h-4 w-4" />

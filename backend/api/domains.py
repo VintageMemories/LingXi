@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from core.domain_config import domain_manager
+from core.domain.manager import domain_manager
 
 router = APIRouter()
 

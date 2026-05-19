@@ -16,7 +16,7 @@ import { useTranslation } from '@/lib/i18n'
 import { SourceReference } from './source-reference'
 import { FeedbackButtons } from './feedback-buttons'
 import { TypingIndicator } from './typing-indicator'
-import { Copy, Check, Bot, RefreshCw, Bookmark, Pin, PinOff, Volume2, VolumeX, Loader2 } from 'lucide-react'
+import { Copy, Check, Bot, RefreshCw, Pin, PinOff, Volume2, VolumeX } from 'lucide-react'
 import { useState, useCallback, useMemo, useRef, useEffect, type ReactNode } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import hljs from 'highlight.js'
@@ -174,26 +174,20 @@ export function MessageBubble({ message, onRegenerate, searchQuery, searchMatche
   const sessionId = useChatStore((s) => s.sessionId)
   const isStreaming = useChatStore((s) => s.isStreaming)
   const settings = useChatStore((s) => s.settings)
-  const toggleBookmark = useChatStore((s) => s.toggleBookmark)
   const togglePin = useChatStore((s) => s.togglePin)
   const user = useChatStore((s) => s.user)
   const isUser = message.role === 'user'
   const [copied, setCopied] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState(false)
-  const [isTTSLoading, setIsTTSLoading] = useState(false)
   const [isTTSPlaying, setIsTTSPlaying] = useState(false)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   const { toast } = useToast()
 
-  const handleTTS = useCallback(async () => {
-    if (isTTSPlaying && audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current = null
+  const handleTTS = useCallback(() => {
+    if (isTTSPlaying) {
+      window.speechSynthesis.cancel()
       setIsTTSPlaying(false)
       return
     }
-
-    if (isTTSLoading) return
 
     const textToRead = message.content.length > 2000
         ? message.content.slice(0, 2000) + '...'
@@ -201,44 +195,18 @@ export function MessageBubble({ message, onRegenerate, searchQuery, searchMatche
 
     if (!textToRead.trim()) return
 
-    setIsTTSLoading(true)
-    try {
-      const res = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textToRead }),
-      })
-
-      if (!res.ok) {
-        toast({ title: t('messages.ttsFailed'), description: t('messages.ttsRetryLater') })
-        return
-      }
-
-      const audioBlob = await res.blob()
-      const audioUrl = URL.createObjectURL(audioBlob)
-      const audio = new Audio(audioUrl)
-      audioRef.current = audio
-
-      audio.onplay = () => setIsTTSPlaying(true)
-      audio.onended = () => {
-        setIsTTSPlaying(false)
-        audioRef.current = null
-        URL.revokeObjectURL(audioUrl)
-      }
-      audio.onerror = () => {
-        setIsTTSPlaying(false)
-        audioRef.current = null
-        URL.revokeObjectURL(audioUrl)
-        toast({ title: t('messages.audioPlayFailed') })
-      }
-
-      await audio.play()
-    } catch {
-      toast({ title: t('messages.ttsFailed'), description: t('messages.networkError') })
-    } finally {
-      setIsTTSLoading(false)
+    const utterance = new SpeechSynthesisUtterance(textToRead)
+    utterance.lang = 'zh-CN'
+    utterance.rate = 1.0
+    utterance.onstart = () => setIsTTSPlaying(true)
+    utterance.onend = () => setIsTTSPlaying(false)
+    utterance.onerror = () => {
+      setIsTTSPlaying(false)
+      toast({ title: t('messages.ttsFailed'), description: t('messages.ttsRetryLater') })
     }
-  }, [message.content, isTTSPlaying, isTTSLoading, toast, t])
+
+    window.speechSynthesis.speak(utterance)
+  }, [message.content, isTTSPlaying, toast, t])
 
   const isSearchActive = searchQuery && searchQuery.trim().length > 0
 
@@ -374,11 +342,6 @@ export function MessageBubble({ message, onRegenerate, searchQuery, searchMatche
                 </div>
             )}
 
-            {!isUser && message.bookmarked && (
-                <div className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md z-10">
-                  <Bookmark className="h-2.5 w-2.5 fill-current" />
-                </div>
-            )}
             {message.isStreaming && !message.content ? (
                 <TypingIndicator />
             ) : isSearchActive && typeof highlightedContent !== 'string' ? (
@@ -507,11 +470,8 @@ export function MessageBubble({ message, onRegenerate, searchQuery, searchMatche
                           size="icon"
                           className={`h-6 w-6 rounded-full ${isTTSPlaying ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
                           onClick={handleTTS}
-                          disabled={isTTSLoading}
                       >
-                        {isTTSLoading ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : isTTSPlaying ? (
+                        {isTTSPlaying ? (
                             <div className="relative">
                               <VolumeX className="h-3 w-3" />
                               <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5">
@@ -526,27 +486,6 @@ export function MessageBubble({ message, onRegenerate, searchQuery, searchMatche
                     </TooltipTrigger>
                     <TooltipContent side="top">
                       <p>{isTTSPlaying ? t('messages.stopReading') : t('messages.readAloud')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <div className="w-px h-3 bg-border/40 mx-0.5" />
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                          variant="ghost"
-                          size="icon"
-                          className={`h-6 w-6 rounded-full ${message.bookmarked ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
-                          onClick={() => {
-                            toggleBookmark(message.id)
-                            toast({ title: message.bookmarked ? t('messages.unbookmarked') : t('messages.bookmarked') })
-                          }}
-                      >
-                        <Bookmark className={`h-3 w-3 ${message.bookmarked ? 'fill-current' : ''}`} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>{message.bookmarked ? t('messages.unbookmark') : t('messages.bookmark')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>

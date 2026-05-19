@@ -11,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -98,18 +97,6 @@ function getPlanLabel(plan: string, t: (key: string, params?: Record<string, str
   }
 }
 
-function getUsageColor(percentage: number): string {
-  if (percentage > 80) return 'text-red-500'
-  if (percentage > 60) return 'text-yellow-500'
-  return 'text-emerald-500'
-}
-
-function getProgressColor(percentage: number): string {
-  if (percentage > 80) return '[&>div]:bg-red-500'
-  if (percentage > 60) return '[&>div]:bg-yellow-500'
-  return '[&>div]:bg-emerald-500'
-}
-
 function getInitials(name: string): string {
   return name.slice(0, 1).toUpperCase()
 }
@@ -147,14 +134,6 @@ function ProfileSection() {
     setIsEditingName(false)
     setEditName('')
   }, [])
-
-  const handlePlanChange = useCallback((plan: string) => {
-    if (!user) return
-    const updated: UserInfo = { ...user, plan }
-    setUser(updated)
-    localStorage.setItem('lingxi_user', JSON.stringify(updated))
-    toast.success(t('settings.planSwitched', { plan: getPlanLabel(plan, t) }))
-  }, [user, setUser])
 
   const handleFileSelect = useCallback(() => {
     fileInputRef.current?.click()
@@ -367,133 +346,16 @@ function ProfileSection() {
         )}
       </div>
 
-      <Separator />
-
-      {/* Plan selector */}
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-muted-foreground">{t('settings.subscriptionPlan')}</label>
-        <Select value={user.plan} onValueChange={handlePlanChange}>
-          <SelectTrigger className="w-full" size="sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="free">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-[10px]">{t('settings.freePlan')}</Badge>
-                <span className="text-xs text-muted-foreground">20{t('settings.times')}{t('settings.perDay')}</span>
-              </div>
-            </SelectItem>
-            <SelectItem value="pro">
-              <div className="flex items-center gap-2">
-                <Badge className="text-[10px]">{t('settings.proPlan')}</Badge>
-                <span className="text-xs text-muted-foreground">100{t('settings.times')}{t('settings.perDay')}</span>
-              </div>
-            </SelectItem>
-            <SelectItem value="agent">
-              <div className="flex items-center gap-2">
-                <Badge className="text-[10px] bg-gradient-to-r from-primary to-primary/80">{t('settings.agentPlan')}</Badge>
-                <span className="text-xs text-muted-foreground">{t('settings.unlimited')}</span>
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-[10px] text-primary/70">
-          {t('settings.ownApiKeyNoLimit')}
-        </p>
-      </div>
-    </div>
-  )
-}
-
-// ============ Usage Section ============
-function UsageSection() {
-  const { t } = useTranslation()
-  const user = useChatStore((s) => s.user)
-  const settings = useChatStore((s) => s.settings)
-  const dailyUsage = useChatStore((s) => s.dailyUsage)
-  const getDailyLimit = useChatStore((s) => s.getDailyLimit)
-
-  const dailyLimit = getDailyLimit()
-  const isUnlimited = dailyLimit === Infinity
-  const usagePercentage = isUnlimited ? 0 : Math.min((dailyUsage.count / dailyLimit) * 100, 100)
-  const usageColorClass = isUnlimited ? 'text-emerald-500' : getUsageColor(usagePercentage)
-  const progressColorClass = isUnlimited ? '[&>div]:bg-emerald-500' : getProgressColor(usagePercentage)
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{t('settings.currentPlan')}</span>
-        <Badge
-          variant="outline"
-          className="border-primary/30 text-primary text-[10px] font-semibold"
-        >
-          {user ? getPlanLabel(user.plan, t) : t('settings.freePlan')}
-        </Badge>
-      </div>
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">{t('settings.dailyConversations')}</span>
-          <span className={`text-xs font-medium ${usageColorClass}`}>
-            {isUnlimited
-              ? `${dailyUsage.count} ${t('settings.times')} · ${t('settings.unlimited')}`
-              : `${dailyUsage.count}/${dailyLimit} ${t('settings.times')}`
-            }
-          </span>
-        </div>
-        <Progress
-          value={isUnlimited ? Math.min(dailyUsage.count, 100) : usagePercentage}
-          className={`h-2 animate-progress-fill ${progressColorClass}`}
-        />
-        {!isUnlimited && usagePercentage > 80 && (
-          <p className="text-[10px] text-red-500/80">
-            {t('settings.usageOver80')}
-          </p>
-        )}
-        {!isUnlimited && usagePercentage <= 80 && usagePercentage > 60 && (
-          <p className="text-[10px] text-yellow-500/80">
-            {t('settings.usageOver60')}
-          </p>
-        )}
-      </div>
-      <div className="flex items-center justify-between pt-1">
-        <span className="text-[10px] text-muted-foreground/60">
-          {t('settings.dailyReset')}
-        </span>
-        {settings.apiKey ? (
-          <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70">
-            {t('settings.ownApiKeyNoLimit')}
-          </span>
-        ) : !user ? (
-          <span className="text-[10px] text-primary/70">
-            {t('settings.loginForHigherLimit')}
-          </span>
-        ) : null}
-      </div>
     </div>
   )
 }
 
 // ============ Token Usage Section ============
-const MODEL_COSTS_DISPLAY: Record<string, { prompt: number; completion: number }> = {
-  'gpt-4o': { prompt: 250, completion: 1000 },
-  'gpt-4o-mini': { prompt: 15, completion: 60 },
-  'deepseek-chat': { prompt: 14, completion: 28 },
-  'deepseek-reasoner': { prompt: 55, completion: 219 },
-  'qwen-max': { prompt: 20, completion: 60 },
-  'qwen-plus': { prompt: 4, completion: 12 },
-  'qwen-turbo': { prompt: 1, completion: 2 },
-  'ernie-4.0': { prompt: 12, completion: 12 },
-  'ernie-3.5-turbo': { prompt: 1.2, completion: 1.2 },
-}
-
 function TokenUsageSection() {
   const { t } = useTranslation()
   const totalTokenUsage = useChatStore((s) => s.totalTokenUsage)
   const resetTokenUsage = useChatStore((s) => s.resetTokenUsage)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
-
-  const costInDollars = (totalTokenUsage.estimatedCost / 100).toFixed(4)
-
   const handleReset = useCallback(() => {
     resetTokenUsage()
     setShowResetConfirm(false)
@@ -502,62 +364,22 @@ function TokenUsageSection() {
 
   return (
     <div className="space-y-4">
+
       {/* Token usage summary */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div className="rounded-lg border bg-muted/30 p-3">
           <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">{t('settings.totalTokens')}</p>
           <p className="text-lg font-bold text-foreground mt-0.5">{totalTokenUsage.totalTokens.toLocaleString()}</p>
         </div>
         <div className="rounded-lg border bg-muted/30 p-3">
-          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">{t('settings.estimatedCost')}</p>
-          <p className="text-lg font-bold text-amber-600 dark:text-amber-400 mt-0.5">${costInDollars}</p>
-          <p className="text-[9px] text-muted-foreground/50">{t('settings.costUnit')}</p>
+          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">{t('settings.promptTokens')}</p>
+          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{totalTokenUsage.promptTokens.toLocaleString()}</p>
+        </div>
+        <div className="rounded-lg border bg-muted/30 p-3">
+          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">{t('settings.completionTokens')}</p>
+          <p className="text-lg font-bold text-sky-600 dark:text-sky-400 mt-0.5">{totalTokenUsage.completionTokens.toLocaleString()}</p>
         </div>
       </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-lg border bg-muted/20 p-2.5">
-          <p className="text-[10px] text-muted-foreground/60">{t('settings.promptTokens')}</p>
-          <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{totalTokenUsage.promptTokens.toLocaleString()}</p>
-        </div>
-        <div className="rounded-lg border bg-muted/20 p-2.5">
-          <p className="text-[10px] text-muted-foreground/60">{t('settings.completionTokens')}</p>
-          <p className="text-sm font-semibold text-sky-600 dark:text-sky-400">{totalTokenUsage.completionTokens.toLocaleString()}</p>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Model pricing reference */}
-      <div>
-        <h4 className="text-xs font-semibold mb-2 flex items-center gap-1.5">
-          <Coins className="h-3.5 w-3.5 text-amber-500" />
-          {t('settings.modelCosts')}
-        </h4>
-        <p className="text-[10px] text-muted-foreground/50 mb-2">{t('settings.perMillionTokens')} (USD)</p>
-        <div className="rounded-lg border overflow-hidden">
-          <table className="w-full text-[10px]">
-            <thead>
-              <tr className="bg-muted/50">
-                <th className="text-left px-2.5 py-1.5 font-medium text-muted-foreground">Model</th>
-                <th className="text-right px-2.5 py-1.5 font-medium text-muted-foreground">Input</th>
-                <th className="text-right px-2.5 py-1.5 font-medium text-muted-foreground">Output</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(MODEL_COSTS_DISPLAY).map(([model, costs]) => (
-                <tr key={model} className="border-t border-muted/50">
-                  <td className="px-2.5 py-1.5 font-mono text-foreground">{model}</td>
-                  <td className="text-right px-2.5 py-1.5 text-emerald-600/70 dark:text-emerald-400/70">${(costs.prompt / 100).toFixed(2)}</td>
-                  <td className="text-right px-2.5 py-1.5 text-amber-600/70 dark:text-amber-400/70">${(costs.completion / 100).toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <Separator />
 
       {/* Reset usage stats */}
       <div>
@@ -665,47 +487,15 @@ function ChatSettingsSection() {
 }
 
 // ============ API Config Section ============
-const PROVIDER_MODELS: Record<string, { id: string; name: string }[]> = {
-  deepseek: [
-    { id: 'deepseek-chat', name: 'DeepSeek Chat' },
-    { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner' },
-  ],
-  openai: [
-    { id: 'gpt-4o', name: 'GPT-4o' },
-    { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-    { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
-    { id: 'o1-mini', name: 'O1 Mini' },
-  ],
-  qwen: [
-    { id: 'qwen-max', name: 'Qwen Max' },
-    { id: 'qwen-plus', name: 'Qwen Plus' },
-    { id: 'qwen-turbo', name: 'Qwen Turbo' },
-  ],
-  wenxin: [
-    { id: 'ernie-4.0', name: 'ERNIE 4.0' },
-    { id: 'ernie-3.5-turbo', name: 'ERNIE 3.5 Turbo' },
-  ],
-  copilot: [
-    { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
-    { id: 'claude-3-opus', name: 'Claude 3 Opus' },
-    { id: 'gpt-4o', name: 'GPT-4o' },
-  ],
-  zhipu: [
-    { id: 'glm-4-plus', name: 'GLM-4 Plus' },
-    { id: 'glm-4-flash', name: 'GLM-4 Flash' },
-    { id: 'glm-4-air', name: 'GLM-4 Air' },
-  ],
-  custom: [],
-}
-
-const PROVIDER_LINKS: Record<string, string> = {
-  deepseek: 'https://platform.deepseek.com/api_keys',
-  openai: 'https://platform.openai.com/api-keys',
-  qwen: 'https://dashscope.console.aliyun.com/apiKey',
-  wenxin: 'https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application',
-  copilot: 'https://github.com/settings/tokens',
-  zhipu: 'https://open.bigmodel.cn/usercenter/apikeys',
-  custom: 'https://openrouter.ai/keys',
+function getProviderKeyUrl(provider: string): string {
+  switch (provider) {
+    case 'deepseek': return 'https://platform.deepseek.com/api_keys'
+    case 'openai': return 'https://platform.openai.com/api-keys'
+    case 'qwen': return 'https://dashscope.console.aliyun.com/apiKey'
+    case 'wenxin': return 'https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application'
+    case 'zhipu': return 'https://open.bigmodel.cn/usercenter/apikeys'
+    default: return ''
+  }
 }
 
 function ApiConfigSection() {
@@ -722,17 +512,19 @@ function ApiConfigSection() {
   const [fetchStatus, setFetchStatus] = useState<'idle' | 'noKey' | 'loading' | 'success' | 'failed'>('idle')
   const [fetchStatusCount, setFetchStatusCount] = useState(0)
 
-  const currentProvider = settings.apiProvider || 'deepseek'
-  const builtinModels = PROVIDER_MODELS[currentProvider] || []
+   const currentProvider = settings.apiProvider || 'deepseek'
   const isCustom = currentProvider === 'custom'
 
-  // Use fetched models if available, otherwise fall back to builtin models
-  const models = fetchedModels.length > 0 ? fetchedModels : builtinModels
-  const isFetched = fetchedModels.length > 0
+  const models = fetchedModels
+
+  // 提供商切换或首次加载时自动拉取模型
+  useEffect(() => {
+    if (settings.apiKey) {
+      handleFetchModels()
+    }
+  }, [currentProvider])
 
   const handleProviderChange = useCallback((provider: string) => {
-    const defaultModels = PROVIDER_MODELS[provider]
-    const savedModel = settings.selectedModels?.[provider] || (defaultModels.length > 0 ? defaultModels[0].id : '')
     const savedKey = settings.apiKeys?.[provider] || ''
     setFetchedModels([])
     setFetchedModelsSource(null)
@@ -741,10 +533,10 @@ function ApiConfigSection() {
     updateSettings({
       apiProvider: provider,
       apiKey: savedKey,
-      selectedModel: savedModel,
+      selectedModel: '',
       apiBaseUrl: provider === 'custom' ? settings.apiBaseUrl : '',
     })
-  }, [updateSettings, settings.apiBaseUrl, settings.selectedModels, settings.apiKeys])
+  }, [updateSettings, settings.apiBaseUrl, settings.apiKeys])
 
   const handleFetchModels = useCallback(async () => {
     setIsLoadingModels(true)
@@ -800,8 +592,7 @@ function ApiConfigSection() {
               settings.apiProvider === 'openai' ? 'https://api.openai.com' :
                   settings.apiProvider === 'qwen' ? 'https://dashscope.aliyuncs.com/compatible-mode' :
                       settings.apiProvider === 'wenxin' ? 'https://aip.baidubce.com' :
-                          settings.apiProvider === 'copilot' ? 'https://api.githubcopilot.com' :
-                              settings.apiProvider === 'zhipu' ? 'https://open.bigmodel.cn/api/paas/v4' :
+                          settings.apiProvider === 'zhipu' ? 'https://open.bigmodel.cn/api/paas/v4' :
                                   ''
       )
 
@@ -836,20 +627,32 @@ function ApiConfigSection() {
       {/* Provider selector */}
       <div className="space-y-2">
         <label className="text-xs font-medium text-muted-foreground">{t('settings.apiProvider')}</label>
-        <Select value={currentProvider} onValueChange={handleProviderChange}>
-          <SelectTrigger className="w-full" size="sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="deepseek">{t('settings.providerDeepseek')}</SelectItem>
-            <SelectItem value="openai">{t('settings.providerOpenai')}</SelectItem>
-            <SelectItem value="qwen">{t('settings.providerQwen')}</SelectItem>
-            <SelectItem value="wenxin">{t('settings.providerWenxin')}</SelectItem>
-            <SelectItem value="copilot">GitHub Copilot</SelectItem>
-            <SelectItem value="zhipu">智谱AI (ChatGLM)</SelectItem>
-            <SelectItem value="custom">{t('settings.providerCustom')}</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={currentProvider} onValueChange={handleProviderChange}>
+            <SelectTrigger className="flex-1" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="deepseek">{t('settings.providerDeepseek')}</SelectItem>
+              <SelectItem value="openai">{t('settings.providerOpenai')}</SelectItem>
+              <SelectItem value="qwen">{t('settings.providerQwen')}</SelectItem>
+              <SelectItem value="wenxin">{t('settings.providerWenxin')}</SelectItem>
+              <SelectItem value="zhipu">智谱AI (ChatGLM)</SelectItem>
+              <SelectItem value="custom">{t('settings.providerCustom')}</SelectItem>
+            </SelectContent>
+          </Select>
+          {!isCustom && (
+            <a
+              href={getProviderKeyUrl(currentProvider)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors shrink-0"
+            >
+              <ExternalLink className="h-3 w-3" />
+              {t('settings.getApiKey')}
+            </a>
+          )}
+        </div>
       </div>
 
       {/* API Key input */}
@@ -867,6 +670,7 @@ function ApiConfigSection() {
           <div className="relative flex-1">
             <Input
               type={showApiKey ? 'text' : 'password'}
+              autoComplete="new-password"
               value={settings.apiKey}
               onChange={(e) => updateSettings({ apiKey: e.target.value })}
               placeholder={t('settings.apiKeyPlaceholder')}
@@ -885,6 +689,7 @@ function ApiConfigSection() {
           </div>
           <Button
             size="sm"
+            disabled={!settings.apiKey.trim()}
             className={`h-9 px-3 text-xs flex-shrink-0 transition-colors ${saveKeyStatus ? 'bg-emerald-500 text-white hover:bg-emerald-600' : ''}`}
             onClick={() => {
               const newKeys = { ...settings.apiKeys, [currentProvider]: settings.apiKey }
@@ -969,12 +774,12 @@ function ApiConfigSection() {
             >
               {isLoadingModels ? (
                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              ) : isFetched ? (
+              ) : models.length > 0 ? (
                 <RefreshCw className="h-3 w-3 mr-1" />
               ) : (
                 <Search className="h-3 w-3 mr-1" />
               )}
-              {isFetched ? t('settings.refreshModels') : t('settings.fetchModels')}
+              {models.length > 0 ? t('settings.refreshModels') : t('settings.fetchModels')}
             </Button>
           </div>
         </div>
@@ -984,20 +789,8 @@ function ApiConfigSection() {
             {t('settings.modelsCount', { count: fetchedTotal })}
           </p>
         )}
-        {/* Get API Key link */}
-        {!isCustom && PROVIDER_LINKS[currentProvider] && (
-          <a
-            href={PROVIDER_LINKS[currentProvider]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors"
-          >
-            <ExternalLink className="h-3 w-3" />
-            {t('settings.getApiKey')} →
-          </a>
-        )}
         {/* Model selector */}
-        {isFetched ? (
+        {models.length > 0 ? (
           <Select
             value={settings.selectedModel}
             onValueChange={(model) => updateSettings({ selectedModel: model })}
@@ -1569,7 +1362,7 @@ function AboutSection() {
           <div className="text-muted-foreground">{t('settings.retrievalEngine')}</div>
           <div className="text-right">BM25 + Vector + RRF</div>
           <div className="text-muted-foreground">{t('settings.modelLabel')}</div>
-          <div className="text-right">GPT-4o</div>
+          <div className="text-right">支持各大厂商模型</div>
         </div>
       </div>
       <Button
@@ -1680,14 +1473,6 @@ export function SettingsDialog() {
                 <Separator />
                 <div>
                   <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-primary" />
-                    {t('settings.usage')}
-                  </h3>
-                  <UsageSection />
-                </div>
-                <Separator />
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                     <Coins className="h-4 w-4 text-amber-500" />
                     {t('settings.tokenUsage')}
                   </h3>
@@ -1702,9 +1487,14 @@ export function SettingsDialog() {
                     <Bot className="h-4 w-4 text-primary" />
                     {t('settings.apiConfig')}
                   </h3>
-                  <p className="text-xs text-muted-foreground mb-4">
+                  <p className="text-xs text-muted-foreground mb-2">
                     {t('settings.apiConfigDesc')}
                   </p>
+                  <div className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2.5">
+                    <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
+                      ⚠️ {t('settings.apiOwnKeyNotice')}
+                    </p>
+                  </div>
                   <ApiConfigSection />
                 </div>
               </TabsContent>

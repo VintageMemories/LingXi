@@ -124,9 +124,13 @@ export async function clearSession(sessionId: string): Promise<void> {
     }
 }
 
-export async function createSession(domain: string = 'medical', title?: string): Promise<string> {
+export async function createSession(domain: string = 'medical', title?: string, sessionId?: string): Promise<string> {
+    const data: Record<string, unknown> = { domain, title: title || null };
+    if (sessionId) {
+        data.id = sessionId;
+    }
     const session = await db.session.create({
-        data: { domain, title: title || null },
+        data,
     });
     sessionCache.set(session.id, []);
     return session.id;

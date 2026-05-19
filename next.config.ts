@@ -16,8 +16,8 @@ const nextConfig: NextConfig = {
             ],
             fallback: [
                 {
-                    source: '/api/:path*',
-                    destination: 'http://localhost:8000/api/:path*',
+                    source: '/api/chat',
+                    destination: 'http://localhost:8000/api/chat',
                 },
             ],
         };

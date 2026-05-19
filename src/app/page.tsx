@@ -11,10 +11,12 @@ import { MessageBubble } from '@/components/chat/message-bubble'
 import { MessageItem } from '@/components/chat/message-item'
 import { MessageSearch } from '@/components/chat/message-search'
 import { ConversationStats } from '@/components/chat/conversation-stats'
+import { SubscriptionDialog } from '@/components/chat/subscription-dialog'
+import { ActivateDialog } from '@/components/chat/activate-dialog'
 import { ChatInput } from '@/components/chat/chat-input'
 import { ErrorBoundary } from '@/components/chat/error-boundary'
 import { usePresence } from '@/hooks/use-presence'
-import { AlertTriangle, ArrowDown, Pin, Zap, Hash, Cpu, Coins } from 'lucide-react'
+import { AlertTriangle, ArrowDown, Pin, Zap, Cpu, Coins } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { List, useDynamicRowHeight, useListRef } from 'react-window'
@@ -94,7 +96,6 @@ function EnhancedFooter({ domainIcon, domainDisplayName, disclaimerText, message
               : 'text-red-500'
 
   const shortSessionId = sessionId ? `#${sessionId.slice(0, 4)}...` : null
-  const costInDollars = (totalTokenUsage.estimatedCost / 100).toFixed(3)
 
   return (
       <div className="relative">
@@ -116,11 +117,6 @@ function EnhancedFooter({ domainIcon, domainDisplayName, disclaimerText, message
                   )}
                   <span className="text-[11px] text-muted-foreground/80 truncate">{domainIcon} {domainDisplayName}</span>
                 </div>
-                {shortSessionId && (
-                    <span className="hidden sm:flex items-center gap-0.5 text-[10px] text-muted-foreground/50">
-                  <Hash className="h-2.5 w-2.5" />{shortSessionId}
-                </span>
-                )}
               </div>
               <p className="hidden md:flex items-center justify-center gap-1 text-[10px] text-muted-foreground/60 truncate flex-1 mx-2">
                 <AlertTriangle className="h-2.5 w-2.5 flex-shrink-0" />{disclaimerText}
@@ -137,11 +133,8 @@ function EnhancedFooter({ domainIcon, domainDisplayName, disclaimerText, message
                   <Coins className="h-2.5 w-2.5" />{t('footer.tokenUsage', { count: totalTokenUsage.totalTokens.toLocaleString() })}
                 </span>
                 )}
-                {mounted && totalTokenUsage.estimatedCost > 0 && (
-                    <span className="hidden md:flex items-center gap-0.5 text-[10px] text-muted-foreground/50">${costInDollars}</span>
-                )}
                 <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground/50">
-                <Cpu className="h-2.5 w-2.5" />{currentModel}
+                <Cpu className="h-2.5 w-2.5" />{currentModel || '...'}
               </span>
                 <span className="text-[10px] text-muted-foreground/50">{messageCount} {t('footer.messagesUnit')}</span>
               </div>
@@ -197,6 +190,12 @@ function PinnedSection({ messages, t }: { readonly messages: ChatMessage[]; read
   )
 }
 
+function ActivateDialogWrapper() {
+  const isActivateOpen = useChatStore((s) => s.isActivateOpen)
+  const setIsActivateOpen = useChatStore((s) => s.setIsActivateOpen)
+  return <ActivateDialog open={isActivateOpen} onOpenChange={setIsActivateOpen} />
+}
+
 export default function Home() {
   const { t } = useTranslation()
   const messages = useChatStore((s) => s.messages)
@@ -248,7 +247,19 @@ export default function Home() {
   useEffect(() => { if (settings.autoScroll && messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' }) }, [messages, settings.autoScroll])
 
   useEffect(() => {
-    try { const storedUser = localStorage.getItem('lingxi_user'); if (storedUser) setUser(JSON.parse(storedUser)) } catch { /* ignore */ }
+    try {
+      const storedUser = localStorage.getItem('lingxi_user')
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser)
+        fetch(`/api/auth?user_id=${parsed.id}`)
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(() => setUser(parsed))
+          .catch(() => {
+            localStorage.removeItem('lingxi_user')
+            localStorage.removeItem('lingxi_token')
+          })
+      }
+    } catch { /* ignore */ }
   }, [setUser])
 
   useEffect(() => {
@@ -339,6 +350,8 @@ export default function Home() {
           </div>
         </div>
         <ConversationStats />
+        <SubscriptionDialog />
+        <ActivateDialogWrapper />
       </ErrorBoundary>
   )
 }

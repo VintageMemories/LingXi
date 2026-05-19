@@ -8,7 +8,6 @@ router = APIRouter()
 _knowledge_entries: list = []
 _next_id = 1
 
-
 class KnowledgeEntry(BaseModel):
     title: str
     content: str

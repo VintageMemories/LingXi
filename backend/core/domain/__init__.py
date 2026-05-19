@@ -1,0 +1,1 @@
+from core.domain.manager import domain_manager

@@ -11,7 +11,6 @@ export interface TokenUsage {
     promptTokens: number
     completionTokens: number
     totalTokens: number
-    estimatedCost: number
 }
 
 export interface ChatMessage {
@@ -55,11 +54,6 @@ export interface SessionInfo {
     tags?: string[]
 }
 
-export interface DailyUsage {
-    count: number
-    date: string
-}
-
 export interface UserInfo {
     id: string
     email: string
@@ -89,7 +83,7 @@ const TOKEN_USAGE_KEY = 'lingxi_token_usage'
 function loadSettings(): ChatSettings {
     const defaults: ChatSettings = {
         autoScroll: true, streamMode: true, showSources: true, showIntent: true,
-        apiProvider: 'deepseek', apiKey: '', apiBaseUrl: '', selectedModel: 'deepseek-chat',
+        apiProvider: 'deepseek', apiKey: '', apiBaseUrl: '', selectedModel: '',
         apiKeys: {}, selectedModels: {}
     }
     if (typeof window === 'undefined') return defaults
@@ -105,7 +99,7 @@ function loadSettings(): ChatSettings {
                 apiProvider: parsed.apiProvider ?? 'deepseek',
                 apiKey: parsed.apiKeys?.[parsed.apiProvider ?? 'deepseek'] ?? parsed.apiKey ?? '',
                 apiBaseUrl: parsed.apiBaseUrl ?? '',
-                selectedModel: parsed.selectedModels?.[parsed.apiProvider ?? 'deepseek'] ?? parsed.selectedModel ?? 'deepseek-chat',
+                selectedModel: parsed.selectedModels?.[parsed.apiProvider ?? 'deepseek'] ?? parsed.selectedModel ?? '',
                 apiKeys: parsed.apiKeys ?? {},
                 selectedModels: parsed.selectedModels ?? {},
             }
@@ -123,56 +117,15 @@ function saveSettings(settings: ChatSettings) {
     }
 }
 
-function getTodayDate(): string {
-    return new Date().toISOString().split('T')[0]
-}
-
-function loadDailyUsage(): DailyUsage {
-    if (typeof window === 'undefined') return { count: 0, date: getTodayDate() }
-    try {
-        const stored = localStorage.getItem('lingxi_daily_usage')
-        if (stored) {
-            const parsed = JSON.parse(stored) as DailyUsage
-            if (parsed.date !== getTodayDate()) {
-                const reset = { count: 0, date: getTodayDate() }
-                localStorage.setItem('lingxi_daily_usage', JSON.stringify(reset))
-                return reset
-            }
-            return parsed
-        }
-    } catch {
-        // ignore
-    }
-    return { count: 0, date: getTodayDate() }
-}
-
-const MODEL_COSTS: Record<string, { prompt: number; completion: number }> = {
-    'gpt-4o': { prompt: 250, completion: 1000 },
-    'gpt-4o-mini': { prompt: 15, completion: 60 },
-    'deepseek-chat': { prompt: 14, completion: 28 },
-    'deepseek-reasoner': { prompt: 55, completion: 219 },
-    'qwen-max': { prompt: 20, completion: 60 },
-    'qwen-plus': { prompt: 4, completion: 12 },
-    'qwen-turbo': { prompt: 1, completion: 2 },
-    'ernie-4.0': { prompt: 12, completion: 12 },
-    'ernie-3.5-turbo': { prompt: 1.2, completion: 1.2 },
-}
-const DEFAULT_COST = { prompt: 10, completion: 30 }
-
-export function estimateCost(promptTokens: number, completionTokens: number, model?: string): number {
-    const costs = (model && MODEL_COSTS[model]) || DEFAULT_COST
-    return (promptTokens * costs.prompt + completionTokens * costs.completion) / 1000000
-}
-
 function loadTotalTokenUsage(): TokenUsage {
-    if (typeof window === 'undefined') return { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCost: 0 }
+    if (typeof window === 'undefined') return { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
     try {
         const stored = localStorage.getItem(TOKEN_USAGE_KEY)
         if (stored) return JSON.parse(stored) as TokenUsage
     } catch {
         // ignore
     }
-    return { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCost: 0 }
+    return { promptTokens: 0, completionTokens: 0, totalTokens: 0}
 }
 
 function saveTotalTokenUsage(usage: TokenUsage) {
@@ -232,8 +185,9 @@ interface ChatState {
     isAboutOpen: boolean
     isShortcutsOpen: boolean
     isStatsOpen: boolean
+    isSubscriptionOpen: boolean
+    isActivateOpen: boolean
     settings: ChatSettings
-    dailyUsage: DailyUsage
     isSearchOpen: boolean
     searchQuery: string
     searchMatches: SearchMatch[]
@@ -273,14 +227,14 @@ interface ChatState {
     setIsAboutOpen: (open: boolean) => void
     setIsShortcutsOpen: (open: boolean) => void
     setIsStatsOpen: (open: boolean) => void
+    setIsSubscriptionOpen: (open: boolean) => void
+    setIsActivateOpen: (open: boolean) => void
     updateSettings: (settings: Partial<ChatSettings>) => void
     logout: () => void
     removeLastAssistantMessage: () => void
     renameSession: (sessionId: string, title: string) => Promise<void>
     toggleBookmark: (messageId: string) => void
     togglePin: (messageId: string) => void
-    incrementUsage: () => void
-    getDailyLimit: () => number
     setIsSearchOpen: (open: boolean) => void
     setSearchQuery: (query: string) => void
     navigateMatch: (direction: 'next' | 'prev') => void
@@ -312,15 +266,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
     isAboutOpen: false,
     isShortcutsOpen: false,
     isStatsOpen: false,
+    isSubscriptionOpen: false,
+    isActivateOpen: false,
     settings: loadSettings(),
-    dailyUsage: loadDailyUsage(),
     isSearchOpen: false,
     searchQuery: '',
     searchMatches: [],
     currentMatchIndex: -1,
     isConnected: true,
     lastResponseLatency: null,
-    currentModel: loadSettings().selectedModel || 'deepseek-chat',
+    currentModel: '',
     activeUsers: [],
     typingUsers: [],
     totalTokenUsage: loadTotalTokenUsage(),
@@ -446,12 +401,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
             set({ isLoadingSessions: false })
         }
     },
-    setUser: (user) => set({ user }),
+    setUser: (user) => {
+        set({ user })
+        if (user?.id) {
+            fetch(`/api/auth/token-usage?userId=${user.id}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.tokenUsage) {
+                        set({ totalTokenUsage: data.tokenUsage })
+                    }
+                })
+                .catch(() => {})
+        }
+    },
     setIsAuthDialogOpen: (open) => set({ isAuthDialogOpen: open }),
     setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
     setIsAboutOpen: (open) => set({ isAboutOpen: open }),
     setIsShortcutsOpen: (open) => set({ isShortcutsOpen: open }),
     setIsStatsOpen: (open) => set({ isStatsOpen: open }),
+    setIsSubscriptionOpen: (open) => set({ isSubscriptionOpen: open }),
+    setIsActivateOpen: (open) => set({ isActivateOpen: open }),
     updateSettings: (partial) => {
         const next = { ...get().settings, ...partial }
         saveSettings(next)
@@ -466,27 +435,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         if (typeof window !== 'undefined') {
             localStorage.removeItem('lingxi_token')
             localStorage.removeItem('lingxi_user')
-        }
-    },
-    incrementUsage: () => {
-        const today = getTodayDate()
-        const current = get().dailyUsage
-        const newUsage: DailyUsage = current.date === today ? { count: current.count + 1, date: today } : { count: 1, date: today }
-        set({ dailyUsage: newUsage })
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('lingxi_daily_usage', JSON.stringify(newUsage))
-        }
-    },
-    getDailyLimit: () => {
-        const user = get().user
-        const settings = get().settings
-        if (settings.apiKey) return Infinity
-        if (!user) return 20
-        switch (user.plan) {
-            case 'agent': return Infinity
-            case 'rag': return 100
-            case 'pro': return 100
-            default: return 20
         }
     },
     removeLastAssistantMessage: () => {
@@ -585,20 +533,32 @@ export const useChatStore = create<ChatState>((set, get) => ({
     setTypingUsers: (users) => set({ typingUsers: users }),
     addTokenUsage: (usage) => {
         set((state) => {
-            const cost = estimateCost(usage.promptTokens, usage.completionTokens, usage.model)
             const newTotal: TokenUsage = {
                 promptTokens: state.totalTokenUsage.promptTokens + usage.promptTokens,
                 completionTokens: state.totalTokenUsage.completionTokens + usage.completionTokens,
                 totalTokens: state.totalTokenUsage.totalTokens + usage.promptTokens + usage.completionTokens,
-                estimatedCost: state.totalTokenUsage.estimatedCost + cost,
             }
-            saveTotalTokenUsage(newTotal)
+            const userId = state.user?.id
+            if (userId) {
+                fetch('/api/auth/token-usage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, tokenUsage: usage }),
+                }).catch(() => {})
+            }
             return { totalTokenUsage: newTotal }
         })
     },
     resetTokenUsage: () => {
-        const empty: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCost: 0 }
-        saveTotalTokenUsage(empty)
+        const empty: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
+        const userId = get().user?.id
+        if (userId) {
+            fetch('/api/auth/token-usage', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId }),
+            }).catch(() => {})
+        }
         set({ totalTokenUsage: empty })
     },
     updateSessionTags: async (sessionId: string, tags: string[]) => {
