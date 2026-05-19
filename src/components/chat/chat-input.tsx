@@ -1,6 +1,27 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+
+// 扩展浏览器语音识别类型
+interface SpeechRecognitionEvent extends Event {
+    results: SpeechRecognitionResultList
+}
+interface SpeechRecognition extends EventTarget {
+    continuous: boolean
+    interimResults: boolean
+    lang: string
+    onresult: (event: SpeechRecognitionEvent) => void
+    onerror: (event: Event) => void
+    onend: () => void
+    start(): void
+    stop(): void
+}
+declare global {
+    interface Window {
+        SpeechRecognition?: new () => SpeechRecognition
+        webkitSpeechRecognition?: new () => SpeechRecognition
+    }
+}
 import { Send, Paperclip, Mic, MicOff, X, Square, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useChatStore } from '@/stores/chat-store'
@@ -142,9 +163,7 @@ export function ChatInput({ onSend, onStop, isStreaming, onTyping, onStopTyping 
       return
     }
 
-    const SpeechRecognition =
-        (window as unknown as { SpeechRecognition?: typeof window.SpeechRecognition; webkitSpeechRecognition?: typeof window.SpeechRecognition }).SpeechRecognition ||
-        (window as unknown as { webkitSpeechRecognition?: typeof window.SpeechRecognition }).webkitSpeechRecognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 
     if (!SpeechRecognition) {
       toast({ title: t('chat.voiceNotSupported'), variant: 'destructive' })

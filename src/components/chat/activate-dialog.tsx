@@ -10,18 +10,17 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { useChatStore, type UserInfo } from '@/stores/chat-store'
 import { useTranslation } from '@/lib/i18n'
 import { toast } from 'sonner'
-import { Sparkles, Loader2, Check, Key, X } from 'lucide-react'
+import { Loader2, Check, Key, X } from 'lucide-react'
 
 interface ActivateDialogProps {
     open: boolean
-    onOpenChange: (open: boolean) => void
+    onOpenChangeAction: (open: boolean) => void
 }
 
-export function ActivateDialog({ open, onOpenChange }: ActivateDialogProps) {
+export function ActivateDialog({ open, onOpenChangeAction }: ActivateDialogProps) {
     const { t } = useTranslation()
     const user = useChatStore((s) => s.user)
     const setUser = useChatStore((s) => s.setUser)
@@ -61,7 +60,7 @@ export function ActivateDialog({ open, onOpenChange }: ActivateDialogProps) {
             toast.success(data.message)
 
             setTimeout(() => {
-                onOpenChange(false)
+                onOpenChangeAction(false)
                 setCode('')
                 setResult('idle')
                 setResultMessage('')
@@ -75,7 +74,7 @@ export function ActivateDialog({ open, onOpenChange }: ActivateDialogProps) {
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={onOpenChangeAction}>
             <DialogContent className="sm:max-w-[400px] p-0 gap-0 overflow-hidden">
                 <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 pt-6 pb-4">
                     <DialogHeader>

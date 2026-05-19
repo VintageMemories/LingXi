@@ -14,15 +14,16 @@ ssl._create_default_https_context = ssl._create_unverified_context
 from datasets import load_dataset
 
 # ========== 获取项目根目录 ==========
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+_TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(_TOOLS_DIR)
 
 # ========== 配置参数 ==========
 # 知识库文件路径（统一知识库）
-DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+DATA_DIR = os.path.join(_PROJECT_ROOT, "backend", "data")
 OUTPUT_FILE = os.path.join(DATA_DIR, "medical_knowledge.txt")
 
 # huatuo 数据源目录
-HUATUO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HUATUO_DIR = _TOOLS_DIR
 
 # record 目录（存放进度记录）
 RECORD_DIR = os.path.join(HUATUO_DIR, "record")

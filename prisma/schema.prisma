@@ -94,14 +94,23 @@ model KnowledgeEntry {
   content     String
   category    String?
   summary     String?
+  // 医疗领域特化字段（可选）
   etiology    String?
   symptoms    String?
   diagnosis   String?
   treatment   String?
   prevention  String?
+  // 法律领域特化字段（可选）
+  legalBasis      String?
+  applicableScope String?
+  riskLevel       String?
+  // 金融领域特化字段（可选）
+  investmentType String?
+  // 通用字段
   fingerprint String?
   vectorId    String?
   sourceUrl   String?
+  metadata    String?   // JSON 格式的扩展元数据
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

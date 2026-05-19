@@ -1,1 +1,0 @@
-export { legalConfig } from './config';

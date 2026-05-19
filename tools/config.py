@@ -4,8 +4,8 @@
 import os
 import sys
 
-_UPLOAD_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.dirname(_UPLOAD_DIR)
+_TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(_TOOLS_DIR)
 _BACKEND_DIR = os.path.join(_PROJECT_ROOT, "backend")
 
 

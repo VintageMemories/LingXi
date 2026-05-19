@@ -82,47 +82,61 @@ async def _handle_free(message: str, domain: str, session_id: str,
                        llm_config: dict, config: dict, is_new_session: bool):
     """免费版：LLM 通用对话，不检索知识库"""
     async def event_generator():
-        if not llm_config.get("api_key"):
-            for chunk in _stream_text("⚠️ 您还没有配置 API Key。请前往设置 → 模型页面，选择大模型提供商并填写 API Key。"):
+        try:
+            # 立即发送一个 start 事件，确保前端不会超时断开
+            yield _sse("start", {"message": "开始处理..."})
+
+            if not llm_config.get("api_key"):
+                for chunk in _stream_text("⚠️ 您还没有配置 API Key。请前往设置 → 模型页面，选择大模型提供商并填写 API Key。"):
+                    yield chunk
+                yield _done("no_api_key", session_id)
+                return
+
+            domain_name = config.get("domain", {}).get("display_name", "AI助手")
+            system_prompt = (config.get("prompts", {}) or {}).get(
+                "system", f"你是{domain_name}，请友好地回答用户问题。注意：你只能基于通用知识回答，不能提供专业建议。"
+            )
+
+            from langchain_openai import ChatOpenAI
+            from langchain_core.messages import SystemMessage, HumanMessage
+
+            import httpx
+            llm = ChatOpenAI(
+                model=llm_config["model"] or "deepseek-chat",
+                api_key=llm_config["api_key"],
+                base_url=llm_config["api_base"] or None,
+                temperature=0.7,
+                request_timeout=httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=5.0),
+                http_client=httpx.Client(verify=False),
+            )
+
+            response = llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=message),
+            ])
+            full_answer = response.content
+
+            for chunk in _stream_text(full_answer):
                 yield chunk
-            yield _done("no_api_key", session_id)
-            return
 
-        domain_name = config.get("domain", {}).get("display_name", "AI助手")
-        system_prompt = (config.get("prompts", {}) or {}).get(
-            "system", f"你是{domain_name}，请友好地回答用户问题。注意：你只能基于通用知识回答，不能提供专业建议。"
-        )
+            if is_new_session:
+                title = message.strip()[:20] + ("..." if len(message.strip()) > 20 else "")
+                await update_session_title(session_id, title)
 
-        from langchain_openai import ChatOpenAI
-        from langchain_core.messages import SystemMessage, HumanMessage
+            yield _sse("done", {
+                "intent": "free_chat",
+                "confidence": 0.9,
+                "sources": [],
+                "session_id": session_id,
+                "from_llm": True,
+            })
 
-        llm = ChatOpenAI(
-            model=llm_config["model"] or "deepseek-chat",
-            api_key=llm_config["api_key"],
-            base_url=llm_config["api_base"] or None,
-            temperature=0.7,
-        )
-
-        response = llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=message),
-        ])
-        full_answer = response.content
-
-        for chunk in _stream_text(full_answer):
-            yield chunk
-
-        if is_new_session:
-            title = message.strip()[:20] + ("..." if len(message.strip()) > 20 else "")
-            await update_session_title(session_id, title)
-
-        yield _sse("done", {
-            "intent": "free_chat",
-            "confidence": 0.9,
-            "sources": [],
-            "session_id": session_id,
-            "from_llm": True,
-        })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            error_msg = f"服务请求失败: {str(e)}"
+            # 直接发送错误事件，不要再流式传输文本，防止因连接中断而发送失败
+            yield _sse("error", {"message": error_msg})
 
     return StreamingResponse(
         event_generator(),
@@ -139,66 +153,76 @@ async def _handle_pro(message: str, domain: str, session_id: str,
                       llm_config: dict, config: dict, is_new_session: bool):
     """Pro 版：知识库检索 → LLM 生成回答（不走 Agent 决策）"""
     async def event_generator():
-        if not llm_config.get("api_key"):
-            for chunk in _stream_text("⚠️ 您还没有配置 API Key。请前往设置 → 模型页面，选择大模型提供商并填写 API Key。"):
-                yield chunk
-            yield _done("no_api_key", session_id)
-            return
+        try:
+            if not llm_config.get("api_key"):
+                for chunk in _stream_text("⚠️ 您还没有配置 API Key。请前往设置 → 模型页面，选择大模型提供商并填写 API Key。"):
+                    yield chunk
+                yield _done("no_api_key", session_id)
+                return
 
-        yield _sse("retrieval_start", {"message": "正在检索知识库..."})
+            yield _sse("retrieval_start", {"message": "正在检索知识库..."})
 
-        retriever = HybridRetriever()
-        results = retriever.search(message)
+            retriever = HybridRetriever()
+            results = retriever.search(message)
 
-        if results:
-            rag_context = "\n\n".join(
-                f"[{i+1}] {r['title']}\n{r.get('content', '')}"
-                for i, r in enumerate(results)
+            if results:
+                rag_context = "\n\n".join(
+                    f"[{i+1}] {r['title']}\n{r.get('content', '')}"
+                    for i, r in enumerate(results)
+                )
+                sources = [{"title": r["title"], "source": r.get("source", "unknown")} for r in results]
+            else:
+                rag_context = ""
+                sources = []
+
+            domain_name = config.get("domain", {}).get("display_name", "AI助手")
+            system_prompt = (config.get("prompts", {}) or {}).get(
+                "system", f"你是{domain_name}，请基于知识库回答用户问题"
             )
-            sources = [{"title": r["title"], "source": r.get("source", "unknown")} for r in results]
-        else:
-            rag_context = ""
-            sources = []
 
-        domain_name = config.get("domain", {}).get("display_name", "AI助手")
-        system_prompt = (config.get("prompts", {}) or {}).get(
-            "system", f"你是{domain_name}，请基于知识库回答用户问题"
-        )
+            from langchain_openai import ChatOpenAI
+            from langchain_core.messages import SystemMessage, HumanMessage
 
-        from langchain_openai import ChatOpenAI
-        from langchain_core.messages import SystemMessage, HumanMessage
+            import httpx
+            llm = ChatOpenAI(
+                model=llm_config["model"] or "deepseek-chat",
+                api_key=llm_config["api_key"],
+                base_url=llm_config["api_base"] or None,
+                temperature=0.7,
+                request_timeout=httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=5.0),
+                http_client=httpx.Client(verify=False),
+            )
 
-        llm = ChatOpenAI(
-            model=llm_config["model"] or "deepseek-chat",
-            api_key=llm_config["api_key"],
-            base_url=llm_config["api_base"] or None,
-            temperature=0.7,
-        )
+            user_prompt = message
+            if rag_context:
+                user_prompt = f"【知识库参考资料】\n{rag_context}\n\n【用户问题】\n{message}"
 
-        user_prompt = message
-        if rag_context:
-            user_prompt = f"【知识库参考资料】\n{rag_context}\n\n【用户问题】\n{message}"
+            response = llm.invoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt),
+            ])
+            full_answer = response.content
 
-        response = llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt),
-        ])
-        full_answer = response.content
+            for chunk in _stream_text(full_answer):
+                yield chunk
 
-        for chunk in _stream_text(full_answer):
-            yield chunk
+            if is_new_session:
+                title = message.strip()[:20] + ("..." if len(message.strip()) > 20 else "")
+                await update_session_title(session_id, title)
 
-        if is_new_session:
-            title = message.strip()[:20] + ("..." if len(message.strip()) > 20 else "")
-            await update_session_title(session_id, title)
+            yield _sse("done", {
+                "intent": "pro_rag",
+                "confidence": 0.9,
+                "sources": sources,
+                "session_id": session_id,
+                "from_llm": True,
+            })
 
-        yield _sse("done", {
-            "intent": "pro_rag",
-            "confidence": 0.9,
-            "sources": sources,
-            "session_id": session_id,
-            "from_llm": True,
-        })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            error_msg = f"服务请求失败: {str(e)}"
+            yield _sse("error", {"message": error_msg})
 
     return StreamingResponse(
         event_generator(),

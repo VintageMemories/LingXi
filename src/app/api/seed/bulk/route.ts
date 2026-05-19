@@ -571,6 +571,10 @@ export async function POST(request: NextRequest) {
             diagnosis: item.diagnosis || null,
             treatment: item.treatment || null,
             prevention: item.prevention || null,
+            legalBasis: (item as any).legalBasis || null,
+            applicableScope: (item as any).applicableScope || null,
+            riskLevel: (item as any).riskLevel || null,
+            investmentType: (item as any).investmentType || null,
             fingerprint,
           },
         });

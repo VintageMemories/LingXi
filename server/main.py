@@ -117,7 +117,7 @@ def main():
     print()
 
     uvicorn.run(
-        "api:app",
+        "app:app",
         host=host,
         port=port,
         reload=True,

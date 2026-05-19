@@ -507,7 +507,7 @@ function ApiConfigSection() {
   const [saveKeyStatus, setSaveKeyStatus] = useState(false)
   const [fetchedModels, setFetchedModels] = useState<{ id: string; name: string }[]>([])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
-  const [fetchedModelsSource, setFetchedModelsSource] = useState<'builtin' | 'custom' | null>(null)
+  const [fetchedModelsSource, setFetchedModelsSource] = useState<string | null>(null)
   const [fetchedTotal, setFetchedTotal] = useState<number | null>(null)
   const [fetchStatus, setFetchStatus] = useState<'idle' | 'noKey' | 'loading' | 'success' | 'failed'>('idle')
   const [fetchStatusCount, setFetchStatusCount] = useState(0)
@@ -1331,7 +1331,7 @@ function KnowledgeTabContent() {
       </p>
 
       {/* Knowledge Manager Dialog */}
-      <KnowledgeManager open={isKnowledgeOpen} onOpenChange={setIsKnowledgeOpen} />
+      <KnowledgeManager open={isKnowledgeOpen} onOpenChangeAction={setIsKnowledgeOpen} />
     </div>
   )
 }

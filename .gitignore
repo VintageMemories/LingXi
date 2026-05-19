@@ -77,7 +77,7 @@ node_modules/.prisma/
 # backend specific
 backend/*.db
 backend/*.db-journal
-backend/__pycache__/
+server/__pycache__/
 
 # upload module (独立的Python上传服务)
-upload/__pycache__/
+tools/__pycache__/

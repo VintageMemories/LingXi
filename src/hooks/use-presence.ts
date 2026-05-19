@@ -38,13 +38,9 @@ export function usePresence() {
   }, [user])
 
   useEffect(() => {
-    const socket = io('/?XTransformPort=3003', {
+    const socket = io('/', {
+      autoConnect: false,
       transports: ['websocket', 'polling'],
-      forceNew: true,
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 10000,
     })
 
     socketRef.current = socket

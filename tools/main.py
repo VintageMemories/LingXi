@@ -22,17 +22,13 @@ import sys
 # ---------------------------------------------------------------------------
 # 路径设置：确保能导入 backend 中的模块
 # ---------------------------------------------------------------------------
-_UPLOAD_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.dirname(_UPLOAD_DIR)
+_TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(_TOOLS_DIR)
 _BACKEND_DIR = os.path.join(_PROJECT_ROOT, "backend")
 
-# 将 backend 目录加入 sys.path，使得 import api / core / ... 能正确解析
+# 将 backend 目录加入 sys.path，使得 import core / ... 能正确解析
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
-
-# 将项目根目录也加入，使得 import upload / backend / ... 能正确解析
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
 
 
 # ---------------------------------------------------------------------------
@@ -196,7 +192,7 @@ def cmd_status(args):
         print(f"  JSONL 数据: 未找到")
 
     # 检查进度文件
-    record_dir = os.path.join(_UPLOAD_DIR, "record")
+    record_dir = os.path.join(_TOOLS_DIR, "record")
     progress_file = os.path.join(record_dir, "progress.json")
     if os.path.exists(progress_file):
         with open(progress_file, "r", encoding="utf-8") as f:

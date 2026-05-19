@@ -37,11 +37,6 @@ export interface DomainInfo {
     display_name: string
     icon: string
     description: string
-    welcome?: {
-        title: string
-        subtitle: string
-        suggestions: string[]
-    }
 }
 
 export interface SessionInfo {

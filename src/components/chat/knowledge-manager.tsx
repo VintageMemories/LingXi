@@ -74,10 +74,10 @@ const domainBadgeColors: Record<string, string> = {
 
 export function KnowledgeManager({
                                    open,
-                                   onOpenChange,
+                                   onOpenChangeAction,
                                  }: {
   open: boolean
-  onOpenChange: (open: boolean) => void
+  onOpenChangeAction: (open: boolean) => void
 }) {
   const { t } = useTranslation()
   const [entries, setEntries] = useState<KnowledgeEntry[]>([])
@@ -204,7 +204,7 @@ export function KnowledgeManager({
 
   return (
       <>
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={onOpenChangeAction}>
           <DialogContent className="sm:max-w-[720px] p-0 gap-0 overflow-hidden max-h-[85vh]">
             {/* Header */}
             <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-6 pt-6 pb-4">

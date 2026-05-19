@@ -1,47 +1,62 @@
 /**
- * 领域管理 API
+ * 反馈 API
+ * 收集用户对AI回答的满意度反馈
  */
 
 import { NextRequest } from 'next/server';
-import { getAllDomains, getCurrentDomain, getCurrentDomainId, switchDomain, getDomainConfig } from '@/core/domain-config';
-
-export async function GET() {
-    const domains = getAllDomains();
-    const currentId = getCurrentDomainId();
-
-    return Response.json({
-        domains,
-        default: currentId,
-        status: 'developing',
-    });
-}
+import { db } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
     try {
-        const { domain } = await request.json();
+        const body = await request.json();
+        const { session_id, message_id, rating, comment, query, response, intent, domain } = body;
 
-        if (!domain) {
-            return Response.json({ error: '请指定领域' }, { status: 400 });
+        if (!session_id || !rating || ![1, -1].includes(rating)) {
+            return Response.json({ error: '缺少必要参数或评分无效' }, { status: 400 });
         }
 
-        const success = switchDomain(domain);
-        if (!success) {
-            return Response.json({ error: '领域不存在' }, { status: 404 });
-        }
-
-        const config = getDomainConfig(domain);
-
-        return Response.json({
-            success: true,
-            current_domain: domain,
-            domain_info: {
-                id: config?.domain.id,
-                name: config?.domain.name,
-                display_name: config?.domain.display_name,
-                icon: config?.domain.icon,
+        const feedback = await db.feedback.create({
+            data: {
+                sessionId: session_id,
+                messageId: message_id || null,
+                rating,
+                comment: comment || null,
+                query: query || null,
+                response: response || null,
+                intent: intent || null,
+                domain: domain || null,
             },
         });
+
+        return Response.json({ success: true, id: feedback.id });
     } catch (error) {
-        return Response.json({ error: '切换领域失败' }, { status: 500 });
+        console.error('[Feedback API] 提交反馈失败:', error);
+        return Response.json({ error: '提交反馈失败' }, { status: 500 });
+    }
+}
+
+export async function GET(request: NextRequest) {
+    try {
+        const url = new URL(request.url);
+        const domain = url.searchParams.get('domain') || undefined;
+
+        const where: Record<string, unknown> = {};
+        if (domain) where.domain = domain;
+
+        const [total, positive, negative] = await Promise.all([
+            db.feedback.count({ where }),
+            db.feedback.count({ where: { ...where, rating: 1 } }),
+            db.feedback.count({ where: { ...where, rating: -1 } }),
+        ]);
+
+        return Response.json({
+            total,
+            positive,
+            negative,
+            satisfaction_rate: total > 0 ? Math.round((positive / total) * 1000) / 10 : 0,
+        });
+    } catch (error) {
+        console.error('[Feedback API] 获取统计失败:', error);
+        return Response.json({ error: '获取反馈统计失败' }, { status: 500 });
     }
 }

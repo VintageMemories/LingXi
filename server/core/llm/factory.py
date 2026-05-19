@@ -4,6 +4,7 @@ LLM 工厂
 """
 
 import os
+import httpx
 from langchain_openai import ChatOpenAI
 from core.agent.state import AgentState
 
@@ -14,7 +15,12 @@ def create_llm(state: AgentState) -> ChatOpenAI:
     api_key = config.get("api_key") or os.getenv("LLM_API_KEY", "")
     base_url = config.get("api_base") or os.getenv("LLM_API_BASE", "")
 
-    kwargs = {"model": model, "temperature": 0.7}
+    kwargs = {
+        "model": model,
+        "temperature": 0.7,
+        "request_timeout": httpx.Timeout(connect=5.0, read=30.0, write=10.0, pool=5.0),
+        "http_client": httpx.Client(verify=False),
+    }
     if api_key:
         kwargs["api_key"] = api_key
     if base_url:

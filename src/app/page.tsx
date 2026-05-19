@@ -95,7 +95,6 @@ function EnhancedFooter({ domainIcon, domainDisplayName, disclaimerText, message
           : lastResponseLatency < 5000 ? 'text-yellow-500'
               : 'text-red-500'
 
-  const shortSessionId = sessionId ? `#${sessionId.slice(0, 4)}...` : null
 
   return (
       <div className="relative">
@@ -193,7 +192,7 @@ function PinnedSection({ messages, t }: { readonly messages: ChatMessage[]; read
 function ActivateDialogWrapper() {
   const isActivateOpen = useChatStore((s) => s.isActivateOpen)
   const setIsActivateOpen = useChatStore((s) => s.setIsActivateOpen)
-  return <ActivateDialog open={isActivateOpen} onOpenChange={setIsActivateOpen} />
+  return <ActivateDialog open={isActivateOpen} onOpenChangeAction={setIsActivateOpen} />
 }
 
 export default function Home() {
@@ -220,7 +219,7 @@ export default function Home() {
   const [containerHeight, setContainerHeight] = useState(0)
   const containerMeasurerRef = useRef<HTMLDivElement>(null)
   const dynamicRowHeight = useDynamicRowHeight({ defaultRowHeight: 120 })
-  const listRef = useListRef()
+  const listRef = useListRef(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
 
   const isSearchActive = searchQuery && searchQuery.trim().length > 0

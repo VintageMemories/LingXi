@@ -29,7 +29,7 @@ export function DomainSelector() {
 
   // Fetch domains on mount
   useEffect(() => {
-    async function fetchDomains() {
+    async function loadDomains() {
       try {
         const res = await fetch('/api/domains')
         const data = await res.json()
@@ -45,35 +45,9 @@ export function DomainSelector() {
           )
           setDomains(domainInfos)
 
-          // Build welcome configs using t() from component scope
-          const welcomeMap: Record<string, { title: string; subtitle: string; suggestions: string[] }> = {
-            medical: {
-              title: t('domains.medicalWelcome'),
-              subtitle: t('domains.medicalWelcomeSub'),
-              suggestions: [t('domains.medicalS1'), t('domains.medicalS2'), t('domains.medicalS3'), t('domains.medicalS4')],
-            },
-            legal: {
-              title: t('domains.legalWelcome'),
-              subtitle: t('domains.legalWelcomeSub'),
-              suggestions: [t('domains.legalS1'), t('domains.legalS2'), t('domains.legalS3'), t('domains.legalS4')],
-            },
-            finance: {
-              title: t('domains.financeWelcome'),
-              subtitle: t('domains.financeWelcomeSub'),
-              suggestions: [t('domains.financeS1'), t('domains.financeS2'), t('domains.financeS3'), t('domains.financeS4')],
-            },
-          }
-
-          const domainsWithWelcome = domainInfos.map((d) => ({
-            ...d,
-            welcome: welcomeMap[d.id],
-          }))
-          setDomains(domainsWithWelcome)
-
-          // Set default domain
           const defaultId = data.default || 'medical'
-          const defaultDomain = domainsWithWelcome.find((d) => d.id === defaultId)
-          if (defaultDomain && !currentDomain) {
+          const defaultDomain = domainInfos.find((d) => d.id === defaultId)
+          if (defaultDomain && !useChatStore.getState().currentDomain) {
             setCurrentDomain(defaultDomain)
           }
         }
@@ -81,8 +55,8 @@ export function DomainSelector() {
         console.error('Failed to fetch domains:', error)
       }
     }
-    fetchDomains()
-  }, [t, currentDomain, setDomains, setCurrentDomain])
+    loadDomains()
+  }, [setDomains, setCurrentDomain])
 
   const handleSelect = (domain: DomainInfo) => {
     setCurrentDomain(domain)

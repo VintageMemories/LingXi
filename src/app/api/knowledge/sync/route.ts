@@ -1,12 +1,11 @@
 /**
  * 知识库同步 API - 检测并更新已变更的知识条目
- * POST /api/knowledge/sync - 重新初始化指定领域的索引
+ * POST /api/knowledge/sync - 返回指定领域的条目统计
  * GET /api/knowledge/sync - 获取各领域的同步状态
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { reinitializeDomainIndex } from '@/core/retrieval/hybrid';
 
 export async function POST(request: NextRequest) {
     try {
@@ -18,17 +17,13 @@ export async function POST(request: NextRequest) {
             select: { id: true, fingerprint: true, title: true, updatedAt: true },
         });
 
-        try {
-            await reinitializeDomainIndex(domain);
-        } catch (e) {
-            console.error('[Knowledge Sync] Failed to reinitialize index:', e);
-        }
+        // 索引重建由后端处理，前端仅返回条目数量
 
         return NextResponse.json({
             success: true,
             domain,
             totalEntries: entries.length,
-            message: `索引已为领域 "${domain}" 重新初始化，共 ${entries.length} 条条目`,
+            message: `领域 "${domain}" 共有 ${entries.length} 条条目，索引重建请求已记录`,
         });
     } catch (error) {
         console.error('[Knowledge Sync] Error:', error);

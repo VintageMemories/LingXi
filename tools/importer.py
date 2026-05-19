@@ -9,10 +9,16 @@
 import json
 import os
 import re
+import sys
 import hashlib
 from typing import List, Dict
-from .parser import DiseaseParser
 from .pipelines import DataPipeline
+
+# 导入后端 RawKnowledgeEntry
+_SERVER_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server")
+if _SERVER_DIR not in sys.path:
+    sys.path.insert(0, _SERVER_DIR)
+from core.data_sources.base import RawKnowledgeEntry
 
 
 # ==========================================================
@@ -94,11 +100,23 @@ def append_to_knowledge_base(data_list: List[Dict], knowledge_path: str):
     """
     os.makedirs(os.path.dirname(knowledge_path), exist_ok=True)
 
-    parser = DiseaseParser()
-
     with open(knowledge_path, 'a', encoding='utf-8', newline='') as f:
         for data in data_list:
-            text = parser.to_knowledge_text(data)
+            entry = RawKnowledgeEntry(
+                title=data.get("title", ""),
+                content=data.get("content", ""),
+                domain=data.get("domain", "medical"),
+                category=data.get("category", ""),
+                summary=data.get("summary", ""),
+                etiology=data.get("etiology", ""),
+                symptoms=data.get("symptoms", ""),
+                diagnosis=data.get("diagnosis", ""),
+                treatment=data.get("treatment", ""),
+                prevention=data.get("prevention", ""),
+                source=data.get("source", ""),
+                source_url=data.get("url", ""),
+            )
+            text = entry.to_knowledge_text()
             if text:
                 f.write("\n" + "=" * 60 + "\n")
                 f.write(text + "\n")

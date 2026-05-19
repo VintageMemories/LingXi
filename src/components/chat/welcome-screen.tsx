@@ -114,10 +114,16 @@ export function WelcomeScreen({ onSuggestionClick }: WelcomeScreenProps) {
 
     const animatedCount = useAnimatedCounter(stats.total || 228, 1500)
 
-    const welcome = currentDomain?.welcome || {
-        title: t('welcome.title'),
-        subtitle: t('welcome.subtitle'),
-        suggestions: [t('chat.askPlaceholder', { name: '🤖' }), t('chat.send'), t('chat.scrollToBottom'), t('settings.data')],
+    const domainId = currentDomain?.id || 'medical'
+    const welcome = {
+        title: t(`domains.${domainId}Welcome`),
+        subtitle: t(`domains.${domainId}WelcomeSub`),
+        suggestions: [
+            t(`domains.${domainId}S1`),
+            t(`domains.${domainId}S2`),
+            t(`domains.${domainId}S3`),
+            t(`domains.${domainId}S4`),
+        ],
     }
 
     const capabilityKeys = currentDomain?.id

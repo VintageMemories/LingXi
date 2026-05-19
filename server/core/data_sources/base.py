@@ -40,13 +40,22 @@ class RawKnowledgeEntry:
 
     def get_fingerprint_content(self) -> str:
         parts = [self.title, self.content, self.summary, self.etiology,
-                 self.symptoms, self.diagnosis, self.treatment, self.prevention]
+                 self.symptoms, self.diagnosis, self.treatment, self.prevention,
+                 self.legal_basis, self.applicable_scope, self.risk_level,
+                 self.investment_type]
         return "|".join(p for p in parts if p)
 
     def to_knowledge_text(self) -> str:
         parts = []
+        # 根据 domain 自适应前缀
+        if self.domain == "legal":
+            prefix = "【法规】"
+        elif self.domain == "finance":
+            prefix = "【金融】"
+        else:
+            prefix = "【疾病】"
         if self.title:
-            parts.append(f"【疾病】{self.title}")
+            parts.append(f"{prefix}{self.title}")
         if self.summary:
             parts.append(f"【概述】{self.summary}")
         if self.etiology:
@@ -59,7 +68,15 @@ class RawKnowledgeEntry:
             parts.append(f"【治疗】{self.treatment}")
         if self.prevention:
             parts.append(f"【预防】{self.prevention}")
-        if self.content and not any([self.summary, self.etiology, self.symptoms]):
+        if self.legal_basis:
+            parts.append(f"【法律依据】{self.legal_basis}")
+        if self.applicable_scope:
+            parts.append(f"【适用范围】{self.applicable_scope}")
+        if self.risk_level:
+            parts.append(f"【风险等级】{self.risk_level}")
+        if self.investment_type:
+            parts.append(f"【投资类型】{self.investment_type}")
+        if self.content and not any([self.summary, self.etiology, self.symptoms, self.legal_basis, self.applicable_scope, self.risk_level, self.investment_type]):
             parts.append(f"【内容】{self.content}")
         return "\n".join(parts)
 
