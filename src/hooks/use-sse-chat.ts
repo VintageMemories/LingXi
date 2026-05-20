@@ -83,11 +83,43 @@ export function useSSEChat() {
 
         try {
           const settings = useChatStore.getState().settings
+          if (!settings.selectedModel) {
+            updateMessage(assistantId, {
+              content: '请先在设置中选择一个模型，然后重新发送消息。',
+              isStreaming: false,
+            })
+            setIsStreaming(false)
+            return
+          }
+          // 确保会话已创建（首次消息时由前端持久化）
+          let currentSessionId = sessionId
+          if (!currentSessionId) {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('lingxi_token') : ''
+            const createRes = await fetch('/api/sessions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : '',
+              },
+              body: JSON.stringify({
+                domain: currentDomain?.id || 'medical',
+                title: content.trim().slice(0, 20) + (content.trim().length > 20 ? '...' : ''),
+              }),
+            })
+            if (createRes.ok) {
+              const createData = await createRes.json()
+              currentSessionId = createData.session_id
+              setSessionId(currentSessionId)
+            }
+          }
+
           console.log('[sendMessage] 准备 fetch /api/chat')
+          const token = typeof window !== 'undefined' ? localStorage.getItem('lingxi_token') : null
           const response = await fetch('/api/chat', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': token ? `Bearer ${token}` : '',
               'X-Model': settings.selectedModel,
               'X-API-Key': settings.apiKey,
               'X-API-Base-URL': settings.apiBaseUrl,
@@ -96,7 +128,7 @@ export function useSSEChat() {
             },
             body: JSON.stringify({
               message: content.trim(),
-              session_id: sessionId || undefined,
+              session_id: currentSessionId || undefined,
               domain: currentDomain?.id || 'medical',
               images: images || undefined,
             }),
@@ -128,9 +160,29 @@ export function useSSEChat() {
 
           const decoder = new TextDecoder()
           let buffer = ''
+          const READ_TIMEOUT = 60000 // 60 秒整体超时
 
           while (true) {
-            const { done, value } = await reader.read()
+            const timeoutPromise = new Promise<ReadableStreamReadResult<Uint8Array>>((_, reject) =>
+              setTimeout(() => reject(new Error('SSE_READ_TIMEOUT')), READ_TIMEOUT)
+            )
+            let result: ReadableStreamReadResult<Uint8Array>
+            try {
+              result = await Promise.race([reader.read(), timeoutPromise])
+            } catch (e: any) {
+              if (e?.message === 'SSE_READ_TIMEOUT') {
+                console.warn('[SSE] 读取超时，强制结束')
+                updateMessage(assistantId, {
+                  content: '服务器响应超时，请稍后重试。',
+                  isStreaming: false,
+                })
+                setIsStreaming(false)
+                try { reader.cancel() } catch { /* ignore */ }
+                return
+              }
+              throw e
+            }
+            const { done, value } = result
             if (done) break
 
             buffer += decoder.decode(value, { stream: true })
@@ -189,13 +241,13 @@ export function useSSEChat() {
                   case 'done': {
                     const finalMsg = useChatStore.getState().messages.find((m) => m.id === assistantId)
                     const assistantContent = finalMsg?.content || ''
-                    const model = useChatStore.getState().settings.selectedModel
+                    const model = useChatStore.getState().settings.selectedModel || 'unknown'
                     const promptTokens = estimateTokens(content.trim())
                     const completionTokens = estimateTokens(assistantContent)
                     const tokenUsage: TokenUsage = {
-                      promptTokens,
-                      completionTokens,
-                      totalTokens: promptTokens + completionTokens,
+                      promptTokens: promptTokens || 0,
+                      completionTokens: completionTokens || 0,
+                      totalTokens: (promptTokens || 0) + (completionTokens || 0),
                     }
                     const fromLLM = event.from_llm === true
                     updateMessage(assistantId, {
@@ -213,20 +265,6 @@ export function useSSEChat() {
                         model,
                       })
                     }
-
-                    const newSessionId = event.session_id
-                    if (newSessionId) {
-                      const domain = useChatStore.getState().currentDomain?.id || 'medical'
-                      const title = content.trim().slice(0, 20) + (content.trim().length > 20 ? '...' : '')
-                      fetch('/api/sessions', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ domain, title, session_id: newSessionId }),
-                      }).then(() => {
-                        setSessionId(newSessionId)
-                      })
-                    }
-
                     setIsStreaming(false)
                     setTimeout(() => { useChatStore.getState().refreshSessions() }, 500)
                     break

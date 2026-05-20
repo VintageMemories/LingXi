@@ -1,29 +1,38 @@
 """
-LLM 工厂
-根据用户请求中的配置动态创建 LLM 实例，每个用户可能用不同的 API Key 和模型
+LLM 工厂 - 使用 init_chat_model 创建兼容实例，确保异步稳定
 """
-
 import os
 import httpx
-from langchain_openai import ChatOpenAI
+from langchain.chat_models import init_chat_model
 from core.agent.state import AgentState
 
 
-def create_llm(state: AgentState) -> ChatOpenAI:
-    config = state.get("llm_config", {})
+def _build_llm(config: dict):
+    """内部函数：根据配置字典创建 LLM 实例，设置同步/异步客户端"""
     model = config.get("model") or os.getenv("LLM_MODEL", "deepseek-chat")
     api_key = config.get("api_key") or os.getenv("LLM_API_KEY", "")
-    base_url = config.get("api_base") or os.getenv("LLM_API_BASE", "")
+    base_url = config.get("api_base") or os.getenv("LLM_API_BASE", "https://api.deepseek.com")
+    base_url = base_url.rstrip("/")
 
-    kwargs = {
-        "model": model,
-        "temperature": 0.7,
-        "request_timeout": httpx.Timeout(connect=5.0, read=30.0, write=10.0, pool=5.0),
-        "http_client": httpx.Client(verify=False),
-    }
-    if api_key:
-        kwargs["api_key"] = api_key
-    if base_url:
-        kwargs["base_url"] = base_url
+    llm = init_chat_model(
+        model,
+        model_provider="openai",
+        base_url=base_url,
+        api_key=api_key,
+        temperature=0.7,
+    )
 
-    return ChatOpenAI(**kwargs)
+    timeout = httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=5.0)
+    llm.http_client = httpx.Client(verify=False, timeout=timeout)
+    llm.http_async_client = httpx.AsyncClient(verify=False, timeout=timeout)
+    return llm
+
+
+def create_llm(state: AgentState):
+    """供 Agent 图节点使用，从 state 中提取 llm_config"""
+    return _build_llm(state.get("llm_config", {}))
+
+
+def create_llm_from_config(llm_config: dict):
+    """供 Free/Pro 流程直接使用，传入配置字典"""
+    return _build_llm(llm_config)

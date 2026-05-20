@@ -20,10 +20,20 @@ export async function GET(
             return Response.json({ error: '会话不存在' }, { status: 404 });
         }
 
-        const messages = await db.message.findMany({
-            where: { sessionId: id },
-            orderBy: { createdAt: 'asc' },
-        });
+        const dbUrl = process.env.DATABASE_URL || '未设置';
+        console.log(`[Sessions/[id]] DATABASE_URL = ${dbUrl}`);
+
+        // 诊断：查询全部消息数
+        const totalCount = await db.$queryRaw<[{ cnt: number }]>`SELECT COUNT(*) as cnt FROM Message`;
+        console.log(`[Sessions/[id]] 全表消息总数: ${totalCount[0].cnt}`);
+
+        // 使用原始 SQL 查询指定会话的消息
+        const rawMessages = await db.$queryRaw<Array<{
+            id: string; sessionId: string; role: string; content: string;
+            intent: string | null; model: string | null; sources: string | null;
+            feedbackRating: number | null; createdAt: Date;
+        }>>`SELECT id, sessionId, role, content, intent, model, sources, feedbackRating, createdAt FROM Message WHERE sessionId = ${id} ORDER BY createdAt ASC`;
+        console.log(`[Sessions/[id]] 原始查询到 ${rawMessages.length} 条消息`);
 
         const sessionData: Record<string, unknown> = {
             id: session.id,
@@ -43,14 +53,14 @@ export async function GET(
 
         return Response.json({
             session: sessionData,
-            messages: messages.map((m) => ({
+            messages: rawMessages.map((m) => ({
                 id: m.id,
                 role: m.role,
                 content: m.content,
                 intent: m.intent,
                 sources: m.sources,
                 feedbackRating: m.feedbackRating,
-                createdAt: m.createdAt.toISOString(),
+                createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : String(m.createdAt),
             })),
         });
     } catch (error) {

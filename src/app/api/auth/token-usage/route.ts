@@ -5,13 +5,19 @@ export async function POST(request: NextRequest) {
     const { userId, tokenUsage } = await request.json()
     if (!userId) return Response.json({ error: '缺少 userId' }, { status: 400 })
 
+    const data: Record<string, any> = {}
+    if (tokenUsage.promptTokens !== undefined && tokenUsage.promptTokens !== null) {
+        data.promptTokens = { increment: tokenUsage.promptTokens }
+    }
+    if (tokenUsage.completionTokens !== undefined && tokenUsage.completionTokens !== null) {
+        data.completionTokens = { increment: tokenUsage.completionTokens }
+    }
+    if (tokenUsage.totalTokens !== undefined && tokenUsage.totalTokens !== null) {
+        data.totalTokens = { increment: tokenUsage.totalTokens }
+    }
     await db.user.update({
         where: { id: userId },
-        data: {
-            promptTokens: { increment: tokenUsage.promptTokens },
-            completionTokens: { increment: tokenUsage.completionTokens },
-            totalTokens: { increment: tokenUsage.totalTokens },
-        },
+        data,
     })
 
     return Response.json({ success: true })

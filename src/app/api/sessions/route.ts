@@ -3,13 +3,25 @@
  */
 
 import { NextRequest } from 'next/server';
-import { createSession, clearSession } from '@/core/memory/session';
 import { db } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
     try {
         const { domain, title, session_id } = await request.json();
-        const sessionId = await createSession(domain || 'medical', title || undefined, session_id || undefined);
+        const authHeader = request.headers.get('Authorization') || '';
+        const token = authHeader.replace('Bearer ', '');
+        let userId: string | undefined = undefined;
+        if (token) {
+            try {
+                const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+                userId = payload.userId;
+            } catch {}
+        }
+        const data: Record<string, unknown> = { domain: domain || 'medical', title: title || null };
+        if (session_id) data.id = session_id;
+        if (userId) data.userId = userId;
+        const session = await db.session.create({ data });
+        const sessionId = session.id;
 
         return Response.json({
             session_id: sessionId,
@@ -22,11 +34,20 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
-        const url = new URL(request.url);
-        const userId = url.searchParams.get('user_id') || undefined;
+        const authHeader = request.headers.get('Authorization') || ''
+        const token = authHeader.replace('Bearer ', '')
+        let userId: string | undefined = undefined
+        if (token) {
+            try {
+                const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
+                userId = payload.userId
+            } catch {}
+        }
 
         const sessions = await db.session.findMany({
-            where: userId ? { userId } : undefined,
+            where: userId
+                ? { OR: [ { userId }, { userId: null } ] }
+                : undefined,
             orderBy: { updatedAt: 'desc' },
             take: 50,
             include: {
@@ -82,7 +103,8 @@ export async function DELETE(request: NextRequest) {
             return Response.json({ error: '缺少session_id' }, { status: 400 });
         }
 
-        await clearSession(session_id);
+        await db.message.deleteMany({ where: { sessionId: session_id } });
+        await db.session.delete({ where: { id: session_id } });
         return Response.json({ success: true });
     } catch (error) {
         return Response.json({ error: '删除会话失败' }, { status: 500 });

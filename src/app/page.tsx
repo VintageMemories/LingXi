@@ -200,6 +200,7 @@ export default function Home() {
   const messages = useChatStore((s) => s.messages)
   const isStreaming = useChatStore((s) => s.isStreaming)
   const currentDomain = useChatStore((s) => s.currentDomain)
+  const sessionId = useChatStore((s) => s.sessionId)
   const isLoadingSession = useChatStore((s) => s.isLoadingSession)
   const settings = useChatStore((s) => s.settings)
   const searchQuery = useChatStore((s) => s.searchQuery)
@@ -300,7 +301,12 @@ export default function Home() {
                   <AnimatePresence mode="wait">
                     {isLoadingSession ? (
                         <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}><SessionLoadingSkeleton /></motion.div>
-                    ) : messages.length === 0 ? (
+                    ) : sessionId && messages.length === 0 ? (
+                        // 已有会话但无消息：显示空聊天区域，用户可直接发消息
+                        <motion.div key="empty-chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="flex items-center justify-center h-full">
+                            <p className="text-sm text-muted-foreground">{t('sidebar.startNewChat')}</p>
+                        </motion.div>
+                    ) : !sessionId && messages.length === 0 ? (
                         <motion.div key="welcome" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, ease: 'easeOut' }}><WelcomeScreen onSuggestionClick={handleSuggestionClick} /></motion.div>
                     ) : useVirtualization && containerHeight > 0 ? (
                         <motion.div key="messages-virtualized" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>

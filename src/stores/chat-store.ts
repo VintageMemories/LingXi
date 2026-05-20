@@ -312,6 +312,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const res = await fetch(`/api/sessions/${sessionId}`)
             if (!res.ok) return
             const data = await res.json()
+            console.log('[loadSession] API 返回数据:', JSON.stringify({ session: data.session, messagesCount: data.messages?.length }))
 
             let bookmarkedIds: string[] = []
             let pinnedIds: string[] = []
@@ -326,28 +327,60 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 } catch {}
             }
 
-            const messages: ChatMessage[] = (data.messages || []).map(
-                (m: { id: string; role: string; content: string; intent?: string; sources?: string; createdAt: string; feedbackRating?: number }) => ({
-                    id: m.id,
-                    role: m.role as 'user' | 'assistant',
-                    content: m.content,
-                    intent: m.intent || undefined,
-                    sources: m.sources ? JSON.parse(m.sources) : undefined,
-                    timestamp: new Date(m.createdAt).getTime(),
-                    feedback: m.feedbackRating as 1 | -1 | null || null,
-                    bookmarked: bookmarkedIds.includes(m.id),
-                    pinned: pinnedIds.includes(m.id),
+            const rawMessages = (data.messages || []) as Array<{
+                id: string; role: string; content: string; intent?: string | null;
+                sources?: string | null; createdAt: string; feedbackRating?: number | null;
+            }>
+            const messages: ChatMessage[] = rawMessages
+                .map((m) => {
+                    let sources: Source[] | undefined
+                    if (m.sources) {
+                        try {
+                            sources = JSON.parse(m.sources)
+                        } catch {
+                            console.warn(`[loadSession] 解析 sources 失败 (id=${m.id})，已忽略`)
+                        }
+                    }
+                    return {
+                        id: m.id,
+                        role: (m.role === 'assistant' || m.role === 'user') ? m.role as 'user' | 'assistant' : 'assistant',
+                        content: m.content || '',
+                        intent: m.intent || undefined,
+                        sources,
+                        timestamp: m.createdAt ? new Date(m.createdAt).getTime() : Date.now(),
+                        feedback: (m.feedbackRating === 1 || m.feedbackRating === -1) ? m.feedbackRating as 1 | -1 : null,
+                        bookmarked: bookmarkedIds.includes(m.id),
+                        pinned: pinnedIds.includes(m.id),
+                    } as ChatMessage
                 })
-            )
+                .filter((m) => m && m.content) // 滤掉异常消息
 
-            const sessionDomain = get().domains.find((d) => d.id === data.session?.domain)
-            if (sessionDomain) {
-                set({ currentDomain: sessionDomain, sessionId, messages })
-            } else {
-                set({ sessionId, messages })
+            // 优先从已加载的领域列表匹配，若未加载则用会话自带字段临时构造
+            let sessionDomain: DomainInfo | null = get().domains.find(
+                (d) => d.id === data.session?.domain
+            ) ?? null
+
+            if (!sessionDomain && data.session?.domain) {
+                sessionDomain = {
+                    id: data.session.domain,
+                    name: data.session.domain,
+                    display_name: data.session.domain,
+                    icon: '🤖',
+                    description: '',
+                }
             }
 
-            set({ sidebarOpen: false, isLoadingSession: false })
+            console.log('[loadSession] 消息数量:', messages.length, '会话ID:', sessionId)
+            if (messages.length > 0) {
+                console.log('[loadSession] 第一条消息:', messages[0].content.substring(0, 50))
+            }
+            set({
+                currentDomain: sessionDomain,
+                sessionId,
+                messages,
+                sidebarOpen: false,
+                isLoadingSession: false
+            })
         } catch (error) {
             console.error('Failed to load session:', error)
             set({ isLoadingSession: false })
@@ -374,7 +407,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     refreshSessions: async () => {
         set({ isLoadingSessions: true })
         try {
-            const res = await fetch('/api/sessions')
+            const token = typeof window !== 'undefined' ? localStorage.getItem('lingxi_token') : ''
+            // 始终带上 token，后端解析失败时会自动忽略，同时还会查询 userId 为空的匿名会话
+            const headers: Record<string, string> = { 'Authorization': token ? `Bearer ${token}` : '' }
+            const res = await fetch('/api/sessions', { headers })
             if (res.ok) {
                 const data = await res.json()
                 let localStorageTags: Record<string, string[]> = {}
@@ -417,13 +453,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
     setIsSubscriptionOpen: (open) => set({ isSubscriptionOpen: open }),
     setIsActivateOpen: (open) => set({ isActivateOpen: open }),
     updateSettings: (partial) => {
-        const next = { ...get().settings, ...partial }
-        saveSettings(next)
+        const state = get()
+        const nextSettings = { ...state.settings, ...partial }
+
+        // 当模型被更新时，同步保存到 selectedModels（按供应商分组），防止刷新丢失
         if (partial.selectedModel !== undefined) {
-            set({ settings: next, currentModel: partial.selectedModel })
-        } else {
-            set({ settings: next })
+            const provider = nextSettings.apiProvider || 'deepseek'
+            nextSettings.selectedModels = {
+                ...nextSettings.selectedModels,
+                [provider]: partial.selectedModel,
+            }
         }
+
+        saveSettings(nextSettings)
+        set({
+            settings: nextSettings,
+            currentModel: partial.selectedModel ?? state.currentModel
+        })
     },
     logout: () => {
         set({ user: null })
