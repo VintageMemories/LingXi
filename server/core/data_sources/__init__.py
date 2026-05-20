@@ -1,23 +1,25 @@
 """
-数据源适配器模块 (data_sources)
+数据源适配器模块
 """
-from .base import DataSourceType, RawKnowledgeEntry, DataSourceConfig, DataSourceAdapter
-from .a_hospital_adapter import AHospitalAdapter
-from .huatuo_adapter import HuatuoAdapter
-from .spider import AHospitalSpider
+from .base import DataSourceAdapter
+from .config import DataSourceConfig, DataSourceType
+from .entry import RawKnowledgeEntry, compute_fingerprint
 from .registry import DataSourceRegistry, get_registry
-from .import_pipeline import ImportPipeline, compute_fingerprint
+from .pipeline.importer import ImportPipeline
+from .adapters.web.a_hospital import AHospitalAdapter
+from .adapters.dataset.huatuo import HuatuoAdapter
+from .spider import AHospitalSpider
 
 __all__ = [
     "DataSourceAdapter",
-    "DataSourceRegistry",
-    "ImportPipeline",
-    "DataSourceType",
     "DataSourceConfig",
+    "DataSourceType",
     "RawKnowledgeEntry",
+    "DataSourceRegistry",
+    "get_registry",
+    "ImportPipeline",
     "AHospitalAdapter",
     "HuatuoAdapter",
     "AHospitalSpider",
     "compute_fingerprint",
-    "get_registry",
 ]

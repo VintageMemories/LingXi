@@ -1,18 +1,14 @@
 """
 统一知识库导入管道
 """
-import hashlib
-import os
-import re
 from typing import List, Dict, Optional
 
-from .base import RawKnowledgeEntry, DataSourceConfig
-from .registry import DataSourceRegistry
-
-
-def compute_fingerprint(entry: RawKnowledgeEntry) -> str:
-    content = entry.get_fingerprint_content()
-    return hashlib.md5(content.encode("utf-8")).hexdigest()
+from core.data_sources.base import DataSourceAdapter
+from core.data_sources.config import DataSourceConfig
+from core.data_sources.entry import RawKnowledgeEntry
+from core.data_sources.registry import DataSourceRegistry
+from core.data_sources.pipeline.dedup import compute_fingerprint, load_existing_fingerprints
+from core.data_sources.pipeline.writer import append_to_knowledge_file
 
 
 class ImportPipeline:
@@ -37,12 +33,12 @@ class ImportPipeline:
 
         adapter = DataSourceRegistry.create(source_name, config)
         if not adapter:
-            raise ValueError(f"Unknown data source: '{source_name}'")
+            raise ValueError(f"未知数据源: '{source_name}'")
         if not adapter.validate_config():
-            raise ValueError(f"Invalid configuration for data source: {source_name}")
+            raise ValueError(f"数据源配置无效: {source_name}")
 
         if existing_fingerprints is None:
-            existing_fingerprints = self._load_existing_fingerprints()
+            existing_fingerprints = load_existing_fingerprints(self.knowledge_path)
 
         new_entries: List[RawKnowledgeEntry] = []
         updated_entries: List[RawKnowledgeEntry] = []
@@ -66,6 +62,9 @@ class ImportPipeline:
                 print(f"[导入错误] 条目 '{entry.title}' 处理失败: {e}")
 
         self.stats["new_entries"] = len(new_entries)
+        all_to_save = new_entries + updated_entries
+        if all_to_save:
+            append_to_knowledge_file(all_to_save, self.knowledge_path)
 
         return {
             "source": source_name,
@@ -76,39 +75,3 @@ class ImportPipeline:
             "new_entry_titles": [e.title for e in new_entries[:10]],
             "updated_entry_titles": [e.title for e in updated_entries[:5]],
         }
-
-    def _load_existing_fingerprints(self) -> Dict[str, str]:
-        existing: Dict[str, str] = {}
-        if not os.path.exists(self.knowledge_path):
-            return existing
-        try:
-            with open(self.knowledge_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            sections = content.split('=' * 60)
-            for section in sections:
-                title_match = re.search(r'【疾病】([^\n]+)', section)
-                if not title_match:
-                    continue
-                title = title_match.group(1)
-                fingerprint = hashlib.md5(section.encode('utf-8')).hexdigest()
-                existing[title] = fingerprint
-        except Exception as e:
-            print(f"[警告] 加载知识库指纹失败: {e}")
-        return existing
-
-    def save_entries_to_knowledge_base(
-            self, entries: List[RawKnowledgeEntry], knowledge_path: Optional[str] = None
-    ) -> int:
-        path = knowledge_path or self.knowledge_path
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        saved_count = 0
-        with open(path, 'a', encoding='utf-8', newline='') as f:
-            for entry in entries:
-                text = entry.to_knowledge_text()
-                if text:
-                    f.write("\n" + "=" * 60 + "\n")
-                    f.write(text + "\n")
-                    f.write("=" * 60 + "\n")
-                    f.flush()
-                    saved_count += 1
-        return saved_count

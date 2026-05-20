@@ -1,42 +1,29 @@
 #!/usr/bin/env python3
 """
-灵析 数据导入 CLI 工具
-用于列出数据源、导入数据、查看导入状态。
+灵析 数据源 CLI 工具
+用于列出数据源、导入数据、查看状态、RAG 检索。
 
 使用方式：
-    # 从 upload 目录运行
-    python main.py list
-    python main.py import --source a_hospital
-    python main.py status
-
-    # 从 backend 目录运行（通过 uv）
-    uv run python ../upload/main.py list
+    cd server
+    uv run python -m core.data_sources.cli list
+    uv run python -m core.data_sources.cli import --source a_hospital
+    uv run python -m core.data_sources.cli status
+    uv run python -m core.data_sources.cli rag "头痛怎么办"
 """
 
 import argparse
 import asyncio
-import json
 import os
 import sys
 
-# ---------------------------------------------------------------------------
-# 路径设置：确保能导入 backend 中的模块
-# ---------------------------------------------------------------------------
-_TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.dirname(_TOOLS_DIR)
-_BACKEND_DIR = os.path.join(_PROJECT_ROOT, "backend")
-
-# 将 backend 目录加入 sys.path，使得 import core / ... 能正确解析
-if _BACKEND_DIR not in sys.path:
-    sys.path.insert(0, _BACKEND_DIR)
+# 确保 server 目录在 sys.path 中
+_SERVER_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _SERVER_DIR not in sys.path:
+    sys.path.insert(0, _SERVER_DIR)
 
 
-# ---------------------------------------------------------------------------
-# CLI 命令实现
-# ---------------------------------------------------------------------------
-
-def cmd_list(args):
-    """列出所有已注册的数据源及其元信息"""
+def cmd_list(_args):
+    """列出所有已注册的数据源"""
     from core.data_sources.registry import DataSourceRegistry
 
     sources = DataSourceRegistry.list_sources()
@@ -61,19 +48,18 @@ def cmd_list(args):
 
 
 def cmd_import(args):
-    """从指定数据源导入数据到知识库"""
+    """从指定数据源导入数据"""
     from core.data_sources.registry import DataSourceRegistry
-    from core.data_sources.base import DataSourceConfig, DataSourceType
-    from core.data_sources.import_pipeline import ImportPipeline
+    from core.data_sources.config import DataSourceConfig, DataSourceType
+    from core.data_sources.pipeline.importer import ImportPipeline
 
     source_name = args.source
     domain = args.domain or "medical"
     max_entries = args.max_entries
     knowledge_path = args.knowledge_path or os.path.join(
-        _BACKEND_DIR, "data", "medical_knowledge.txt"
+        _SERVER_DIR, "data", "medical_knowledge.txt"
     )
 
-    # 检查数据源是否存在
     if not DataSourceRegistry.has_source(source_name):
         print(f"[错误] 数据源 '{source_name}' 未注册。")
         print("可用数据源:")
@@ -81,20 +67,26 @@ def cmd_import(args):
             print(f"  - {src.get('name', 'N/A')}")
         return
 
-    # 构建配置
-    source_type_map = {
-        "a_hospital": DataSourceType.WEB_SCRAPER,
-        "huatuo": DataSourceType.DATASET,
-    }
-    source_type = source_type_map.get(source_name, DataSourceType.WEB_SCRAPER)
+    # 先获取适配器元数据，从中提取 source_type
+    metadata = DataSourceRegistry.get_metadata(source_name)
+    if not metadata:
+        print(f"[错误] 无法获取数据源 '{source_name}' 的元数据")
+        return
 
+    source_type_str = metadata.get("source_type", "web_scraper")
+    try:
+        source_type = DataSourceType(source_type_str)
+    except ValueError:
+        source_type = DataSourceType.WEB_SCRAPER
+
+    # options 从 CLI 参数构建，适配器内部自行处理默认值
     options = {}
-    if source_name == "a_hospital":
-        options["base_url"] = args.base_url or "https://www.a-hospital.com"
-        options["delay"] = args.delay or 1.0
-        options["list_urls"] = [
-            args.list_url or "https://www.a-hospital.com/w/疾病列表"
-        ]
+    if args.base_url:
+        options["base_url"] = args.base_url
+    if args.delay:
+        options["delay"] = args.delay
+    if args.list_url:
+        options["list_urls"] = [args.list_url]
 
     config = DataSourceConfig(
         name=source_name,
@@ -104,7 +96,6 @@ def cmd_import(args):
         options=options,
     )
 
-    # 执行导入
     print("\n" + "=" * 60)
     print(f"  开始导入数据源: {source_name}")
     print("=" * 60)
@@ -124,7 +115,6 @@ def cmd_import(args):
         print(f"\n[错误] 导入失败: {e}")
         return
 
-    # 输出结果
     stats = result.get("stats", {})
     print(f"\n{'=' * 60}")
     print(f"  导入完成")
@@ -138,23 +128,16 @@ def cmd_import(args):
 
     new_titles = result.get("new_entry_titles", [])
     if new_titles:
-        print(f"\n  新增条目标题 (前 {len(new_titles)} 条):")
-        for t in new_titles:
+        print(f"\n  新增条目标题 (前 10 条):")
+        for t in new_titles[:10]:
             print(f"    - {t}")
-
-    updated_titles = result.get("updated_entry_titles", [])
-    if updated_titles:
-        print(f"\n  更新条目标题 (前 {len(updated_titles)} 条):")
-        for t in updated_titles:
-            print(f"    - {t}")
-
     print()
 
 
 def cmd_status(args):
     """查看知识库当前状态"""
     knowledge_path = args.knowledge_path or os.path.join(
-        _BACKEND_DIR, "data", "medical_knowledge.txt"
+        _SERVER_DIR, "data", "medical_knowledge.txt"
     )
 
     print("\n" + "=" * 60)
@@ -167,7 +150,6 @@ def cmd_status(args):
         print()
         return
 
-    # 统计条目数
     entry_count = 0
     file_size = os.path.getsize(knowledge_path)
 
@@ -180,8 +162,7 @@ def cmd_status(args):
     print(f"  知识条目数: {entry_count}")
     print()
 
-    # 显示 JSONL 文件状态
-    jsonl_path = os.path.join(_BACKEND_DIR, "data", "a_hospital", "disease_data.jsonl")
+    jsonl_path = os.path.join(_SERVER_DIR, "data", "a_hospital", "disease_data.jsonl")
     if os.path.exists(jsonl_path):
         jsonl_count = 0
         with open(jsonl_path, "r", encoding="utf-8") as f:
@@ -191,19 +172,6 @@ def cmd_status(args):
     else:
         print(f"  JSONL 数据: 未找到")
 
-    # 检查进度文件
-    record_dir = os.path.join(_TOOLS_DIR, "record")
-    progress_file = os.path.join(record_dir, "progress.json")
-    if os.path.exists(progress_file):
-        with open(progress_file, "r", encoding="utf-8") as f:
-            progress = json.load(f)
-        print(f"\n  华佗导入进度:")
-        print(f"    已扫描: {progress.get('skipped', 0)} 条")
-        print(f"    已保存: {progress.get('saved', 0)} 条")
-    else:
-        print(f"\n  华佗导入进度: 无进度记录")
-
-    # 列出可用数据源
     try:
         from core.data_sources.registry import DataSourceRegistry
         sources = DataSourceRegistry.list_sources()
@@ -217,71 +185,69 @@ def cmd_status(args):
     print()
 
 
-# ---------------------------------------------------------------------------
-# CLI 入口
-# ---------------------------------------------------------------------------
+def cmd_rag(args):
+    """直接检索知识库"""
+    from core.retrieval.hybrid import HybridRetriever
+    from core.domain.manager import domain_manager
+
+    config = domain_manager.get_domain_config(args.domain)
+    domain_name = config["domain"]["display_name"] if config else args.domain
+
+    print(f"\n{'=' * 60}")
+    print(f"  RAG 知识库检索")
+    print(f"{'=' * 60}")
+    print(f"  领域: {domain_name}")
+    print(f"  查询: {args.query}")
+    print(f"  Top-K: {args.top_k}")
+    print()
+
+    retriever = HybridRetriever()
+    results = retriever.search(args.query, top_k=args.top_k)
+
+    if not results:
+        print("  [无结果] 未找到相关内容\n")
+        return
+
+    for i, r in enumerate(results):
+        print(f"  [{i + 1}] {r.get('title', '无标题')}")
+        print(f"      来源: {r.get('source', 'unknown')}")
+        print(f"      得分: {r.get('score', 0):.4f}")
+        content = r.get('content', '')
+        preview = content[:200].replace('\n', ' ') + ('...' if len(content) > 200 else '')
+        print(f"      内容: {preview}\n")
+
+    print(f"  共 {len(results)} 条结果\n")
+
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="lingxi-import",
-        description="灵析 数据导入 CLI 工具",
+        prog="lingxi-data",
+        description="灵析 数据源 CLI 工具",
     )
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
 
-    # list 命令
     list_parser = subparsers.add_parser("list", help="列出所有已注册的数据源")
     list_parser.set_defaults(func=cmd_list)
 
-    # import 命令
     import_parser = subparsers.add_parser("import", help="从数据源导入数据")
-    import_parser.add_argument(
-        "--source", "-s",
-        required=True,
-        help="数据源名称 (例如: a_hospital, huatuo)",
-    )
-    import_parser.add_argument(
-        "--domain", "-d",
-        default="medical",
-        help="目标领域 (默认: medical)",
-    )
-    import_parser.add_argument(
-        "--max-entries",
-        type=int,
-        default=None,
-        help="最大导入条目数 (默认: 无限制)",
-    )
-    import_parser.add_argument(
-        "--knowledge-path",
-        default=None,
-        help="知识库文件路径",
-    )
-    # a_hospital 特有参数
-    import_parser.add_argument(
-        "--base-url",
-        default=None,
-        help="A+医学百科基础URL (仅 a_hospital)",
-    )
-    import_parser.add_argument(
-        "--delay",
-        type=float,
-        default=None,
-        help="请求间隔秒数 (仅 a_hospital, 默认: 1.0)",
-    )
-    import_parser.add_argument(
-        "--list-url",
-        default=None,
-        help="疾病列表页URL (仅 a_hospital)",
-    )
+    import_parser.add_argument("--source", "-s", required=True, help="数据源名称")
+    import_parser.add_argument("--domain", "-d", default="medical", help="目标领域")
+    import_parser.add_argument("--max-entries", type=int, default=None, help="最大导入条目数")
+    import_parser.add_argument("--knowledge-path", default=None, help="知识库文件路径")
+    import_parser.add_argument("--base-url", default=None, help="A+医学百科基础URL")
+    import_parser.add_argument("--delay", type=float, default=None, help="请求间隔秒数")
+    import_parser.add_argument("--list-url", default=None, help="疾病列表页URL")
     import_parser.set_defaults(func=cmd_import)
 
-    # status 命令
     status_parser = subparsers.add_parser("status", help="查看知识库导入状态")
-    status_parser.add_argument(
-        "--knowledge-path",
-        default=None,
-        help="知识库文件路径",
-    )
+    status_parser.add_argument("--knowledge-path", default=None, help="知识库文件路径")
     status_parser.set_defaults(func=cmd_status)
+
+    rag_parser = subparsers.add_parser("rag", help="RAG 知识库检索")
+    rag_parser.add_argument("query", help="检索查询内容")
+    rag_parser.add_argument("--domain", "-d", default="medical", help="领域")
+    rag_parser.add_argument("--top-k", "-k", type=int, default=5, help="返回结果数")
+    rag_parser.set_defaults(func=cmd_rag)
 
     return parser
 

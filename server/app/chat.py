@@ -23,16 +23,28 @@ import re
 
 def _get_db_path() -> str:
     """从 DATABASE_URL 解析 SQLite 文件路径，兼容 Prisma 格式"""
+    # 当前文件: server/app/chat.py
+    # 项目根目录: server/../ = 项目根
+    _current_file = os.path.abspath(__file__)                # server/app/chat.py
+    _server_dir = os.path.dirname(os.path.dirname(_current_file))  # server/
+    _project_root = os.path.dirname(_server_dir)                   # 项目根目录
+
     db_url = os.getenv("DATABASE_URL", "file:./prisma/dev.db")
     match = re.search(r'file:(.+)', db_url)
     if match:
         path = match.group(1)
         if not os.path.isabs(path):
-            base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            path = os.path.join(base, path)
-        return os.path.abspath(path)
-    default_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "prisma", "dev.db")
-    return os.path.abspath(default_path)
+            # 相对路径基于项目根目录解析
+            path = os.path.join(_project_root, path)
+        resolved = os.path.abspath(path)
+        print(f"[DB] 解析 DATABASE_URL={db_url} -> {resolved}")
+        return resolved
+
+    # fallback: 默认路径，与 Prisma schema 中 datasource 默认值一致
+    default_path = os.path.join(_project_root, "prisma", "dev.db")
+    resolved = os.path.abspath(default_path)
+    print(f"[DB] 使用默认路径 -> {resolved}")
+    return resolved
 
 _DB_PATH = _get_db_path()
 print(f"[DB] 数据库路径: {_DB_PATH}")
