@@ -13,13 +13,13 @@ import {
     DropdownMenuTrigger,
     DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
-import { DomainSelector } from './domain-selector'
-import { AuthDialog } from './auth-dialog'
-import { SettingsDialog } from './settings-dialog'
-import { AboutDialog } from './about-dialog'
-import { KeyboardShortcutsPanel } from './keyboard-shortcuts'
-import { PresenceIndicator } from './presence-indicator'
-import { useChatStore } from '@/stores/chat-store'
+import { DomainSelector } from '@/components/domain/domain-selector'
+import { AuthDialog } from '@/components/auth/auth-dialog'
+import { SettingsDialog } from '@/components/settings/settings-dialog'
+import { AboutDialog } from '@/components/about/about-dialog'
+import { KeyboardShortcutsPanel } from '@/components/settings/keyboard-shortcuts'
+import { PresenceIndicator } from '@/components/domain/presence-indicator'
+import { useChatStore } from '../../stores/chat'
 import { useTranslation } from '@/lib/i18n'
 import { motion, AnimatePresence } from 'framer-motion'
 import {

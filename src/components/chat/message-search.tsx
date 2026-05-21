@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { useChatStore } from '@/stores/chat-store'
+import { useChatStore } from '../../stores/chat'
 import { useTranslation } from '@/lib/i18n'
 import { Search, X, ChevronUp, ChevronDown } from 'lucide-react'
 

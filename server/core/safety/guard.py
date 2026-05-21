@@ -1,45 +1,110 @@
 """
 Safety guard module for Lingxi backend.
-Checks for emergency/blocked keywords and filters unsafe content.
+使用本地 ONNX 模型进行语义意图分类，替代关键词匹配
 """
-from typing import Dict, Any
+import time
+from typing import Dict, Any, Optional
 
 
 class SafetyGuard:
-    """Safety guard that checks for emergency/blocked keywords."""
+    """基于语义理解的安全守卫"""
 
-    def check(self, message: str, domain_config: Dict[str, Any]) -> Dict[str, Any]:
+    # 紧急响应文案
+    EMERGENCY_RESPONSES = {
+        "emergency_medical": (
+            "⚠️ 检测到可能的医疗紧急情况！\n\n"
+            "请立即采取以下行动：\n"
+            "1. 拨打 120 急救电话\n"
+            "2. 保持患者呼吸道通畅\n"
+            "3. 不要随意移动患者\n"
+            "4. 等待专业急救人员到达\n\n"
+            "时间就是生命，请立即行动！"
+        ),
+        "emergency_legal": (
+            "⚠️ 检测到可能的人身安全威胁！\n\n"
+            "请立即采取以下行动：\n"
+            "1. 拨打 110 报警电话\n"
+            "2. 尽量远离危险源\n"
+            "3. 向周围人求助\n"
+            "4. 保留证据\n\n"
+            "您的安全最重要，请立即求助！"
+        ),
+    }
+
+    def check(self, message: str, domain_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Check message for safety concerns.
-        Returns dict with: blocked, emergency, message
+        使用本地模型进行意图分类
+
+        Returns:
+            {
+                "blocked": bool,
+                "emergency": bool,
+                "emergency_type": str | None,  # "medical" | "legal"
+                "intent": str,                   # 分类标签 id
+                "intent_description": str,       # 分类标签描述
+                "confidence": float,             # 置信度
+                "message": str,                  # 拦截/紧急时的提示文案
+            }
         """
-        safety_config = domain_config.get("safety", {})
-        blocked_keywords = safety_config.get("blocked_keywords", [])
-        emergency_keywords = safety_config.get("emergency_keywords", [])
-        emergency_response = safety_config.get("emergency_response", "⚠️ 检测到紧急情况，请立即求助！")
+        from core.intent.classifier import classify
 
-        # Check for blocked content
-        for keyword in blocked_keywords:
-            if keyword in message:
-                return {
-                    "blocked": True,
-                    "emergency": False,
-                    "message": "⚠️ 您的消息包含不当内容，已自动过滤。如果您需要帮助，请拨打心理援助热线或联系专业人士。",
-                }
+        start = time.time()
+        result = classify(message)
+        print(f"[Safety] 分类耗时: {(time.time()-start)*1000:.0f}ms, 结果: {result['intent']}")
 
-        # Check for emergency keywords
-        for keyword in emergency_keywords:
-            if keyword in message:
-                return {
-                    "blocked": False,
-                    "emergency": True,
-                    "message": emergency_response,
-                }
+        intent = result["intent"]
+        confidence = result["confidence"]
 
-        return {"blocked": False, "emergency": False, "message": ""}
+        # 紧急检测
+        if intent == "emergency_medical":
+            return {
+                "blocked": False,
+                "emergency": True,
+                "emergency_type": "medical",
+                "intent": intent,
+                "intent_description": result["description"],
+                "confidence": confidence,
+                "message": self.EMERGENCY_RESPONSES["emergency_medical"],
+            }
 
-    def add_disclaimer(self, text: str, domain_config: Dict[str, Any], is_rag_useful: bool = False) -> str:
-        disclaimer = domain_config.get("safety", {}).get("disclaimer", "")
+        if intent == "emergency_legal":
+            return {
+                "blocked": False,
+                "emergency": True,
+                "emergency_type": "legal",
+                "intent": intent,
+                "intent_description": result["description"],
+                "confidence": confidence,
+                "message": self.EMERGENCY_RESPONSES["emergency_legal"],
+            }
+
+        # 不当内容拦截
+        if intent == "blocked":
+            return {
+                "blocked": True,
+                "emergency": False,
+                "emergency_type": None,
+                "intent": intent,
+                "intent_description": result["description"],
+                "confidence": confidence,
+                "message": "⚠️ 您的消息包含不当内容，已自动过滤。",
+            }
+
+        # 正常消息
+        return {
+            "blocked": False,
+            "emergency": False,
+            "emergency_type": None,
+            "intent": intent,
+            "intent_description": result["description"],
+            "confidence": confidence,
+            "message": "",
+        }
+
+    def add_disclaimer(self, text: str, domain_config: Optional[Dict[str, Any]] = None, is_rag_useful: bool = False) -> str:
+        disclaimer = ""
+        if domain_config:
+            disclaimer = domain_config.get("safety", {}).get("disclaimer", "")
         if not disclaimer:
             return text
         if is_rag_useful:

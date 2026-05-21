@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useTranslation } from '@/lib/i18n'
-import type { Source } from '@/stores/chat-store'
+import type { Source } from '../../stores/chat'
 
 interface SourceReferenceProps {
     sources: Source[]

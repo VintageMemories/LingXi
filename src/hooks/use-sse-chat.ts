@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef } from 'react'
-import { useChatStore, type ChatMessage, type TokenUsage } from '@/stores/chat-store'
+import { useChatStore, type ChatMessage, type TokenUsage } from '../stores/chat'
 
 let messageIdCounter = 0
 function generateId(): string {

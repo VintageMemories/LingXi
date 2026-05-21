@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useChatStore, type SessionInfo } from '@/stores/chat-store'
+import { useChatStore, type SessionInfo } from '../../stores/chat'
 import { MessageCircle, Clock, ArrowRight } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 import { useEffect, useState, useRef } from 'react'

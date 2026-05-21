@@ -73,7 +73,7 @@ tools:
     description: 刑事辩护咨询
 safety:
   blocked_keywords: [怎么报复, 如何行贿, 伪造证据, 毁灭证据]
-  emergency_keywords: [拘留, 逮捕, 紧急]
+  emergency_keywords: [被拘留, 被逮捕, 正在紧急, 被刑拘]
   emergency_response: "⚠️ 检测到紧急法律情况！建议您立即联系律师或拨打法律援助热线。"
   disclaimer: "以上内容仅供参考，不构成法律意见。重大法律决策请咨询专业律师。"
 prompts:

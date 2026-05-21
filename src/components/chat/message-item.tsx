@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useEffect } from 'react'
 import { MessageBubble } from './message-bubble'
-import type { ChatMessage } from '@/stores/chat-store'
+import type { ChatMessage } from '../../stores/chat'
 
 interface MessageItemProps {
   message: ChatMessage

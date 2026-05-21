@@ -12,42 +12,32 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 
-# 加载项目根目录的 .env 文件
-_ENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env")
-if os.path.exists(_ENV_PATH):
-    load_dotenv(_ENV_PATH)
-    print(f"[DB] 已加载环境变量文件: {_ENV_PATH}")
-
-# 数据库连接（与 Prisma 共用 SQLite 文件）
 import re
 
 def _get_db_path() -> str:
     """从 DATABASE_URL 解析 SQLite 文件路径，兼容 Prisma 格式"""
-    # 当前文件: server/app/chat.py
-    # 项目根目录: server/../ = 项目根
-    _current_file = os.path.abspath(__file__)                # server/app/chat.py
-    _server_dir = os.path.dirname(os.path.dirname(_current_file))  # server/
-    _project_root = os.path.dirname(_server_dir)                   # 项目根目录
-
     db_url = os.getenv("DATABASE_URL", "file:./prisma/dev.db")
     match = re.search(r'file:(.+)', db_url)
     if match:
         path = match.group(1)
         if not os.path.isabs(path):
-            # 相对路径基于项目根目录解析
-            path = os.path.join(_project_root, path)
-        resolved = os.path.abspath(path)
-        print(f"[DB] 解析 DATABASE_URL={db_url} -> {resolved}")
-        return resolved
+            base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            path = os.path.join(base, path)
+        return os.path.abspath(path)
+    default_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "prisma", "dev.db")
+    return os.path.abspath(default_path)
 
-    # fallback: 默认路径，与 Prisma schema 中 datasource 默认值一致
-    default_path = os.path.join(_project_root, "prisma", "dev.db")
-    resolved = os.path.abspath(default_path)
-    print(f"[DB] 使用默认路径 -> {resolved}")
-    return resolved
+_DB_PATH = None
 
-_DB_PATH = _get_db_path()
-print(f"[DB] 数据库路径: {_DB_PATH}")
+def init_chat_module():
+    """在 FastAPI startup 事件中调用，加载环境变量并初始化数据库路径"""
+    global _DB_PATH
+    _ENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env")
+    if os.path.exists(_ENV_PATH):
+        load_dotenv(_ENV_PATH)
+        print(f"[DB] 已加载环境变量文件: {_ENV_PATH}")
+    _DB_PATH = _get_db_path()
+    print(f"[DB] 数据库路径: {_DB_PATH}")
 
 def _save_message(session_id: str, role: str, content: str, model: str = "", intent: str = "", sources: str = ""):
     """将一条消息直接写入 Message 表（自动建表）"""
@@ -129,7 +119,7 @@ async def chat(request: Request):
             await flush()
         return StreamingResponse(err_gen(), media_type="text/event-stream")
 
-    # 第一步：安全过滤
+    # 第一步：安全过滤（使用本地模型语义分类）
     safety_result = _safety_guard.check(message, config)
 
     if safety_result["blocked"]:
@@ -142,16 +132,48 @@ async def chat(request: Request):
         return StreamingResponse(blocked_gen(), media_type="text/event-stream")
 
     if safety_result["emergency"]:
-        emergency_msg = (config.get("prompts", {}) or {}).get(
-            "emergency", "检测到紧急情况，请立即就医"
-        )
         async def emergency_gen():
-            for chunk in _stream_text(emergency_msg):
+            for chunk in _stream_text(safety_result["message"]):
                 yield chunk
                 await flush()
             yield _done("emergency", session_id, emergency=True)
             await flush()
         return StreamingResponse(emergency_gen(), media_type="text/event-stream")
+
+    # 领域越界检测：问题领域 ≠ 当前助手领域
+    intent = safety_result.get("intent", "")
+    intent_domain = None
+    if intent.startswith("medical_"):
+        intent_domain = "medical"
+    elif intent.startswith("legal_"):
+        intent_domain = "legal"
+    elif intent.startswith("finance_"):
+        intent_domain = "finance"
+
+    if intent == "out_of_domain":
+        async def out_of_domain_gen():
+            msg = "⚠️ 您的问题超出了我目前的知识范围。\n\n我是医小助（医疗）、法小助（法律）、金小助（金融）领域的智能助手，请尝试咨询这些领域的问题。"
+            for chunk in _stream_text(msg):
+                yield chunk
+                await flush()
+            yield _done("out_of_domain", session_id, classified_intent=intent)
+            await flush()
+        return StreamingResponse(out_of_domain_gen(), media_type="text/event-stream")
+
+    if intent_domain and intent_domain != domain:
+        domain_names = {"medical": "医小助", "legal": "法小助", "finance": "金小助"}
+        current_name = domain_names.get(domain, domain)
+        suggested_name = domain_names.get(intent_domain, intent_domain)
+        async def cross_domain_gen():
+            msg = f"⚠️ 您的问题属于【{suggested_name}】领域，建议切换到 {suggested_name} 后再咨询。\n\n当前您在【{current_name}】下，可以点击左上角切换领域。"
+            for chunk in _stream_text(msg):
+                yield chunk
+                await flush()
+            yield _done("cross_domain", session_id,
+                        classified_intent=intent,
+                        suggested_domain=intent_domain)
+            await flush()
+        return StreamingResponse(cross_domain_gen(), media_type="text/event-stream")
 
     # 第二步：根据订阅方案分流
     if user_plan == "agent":

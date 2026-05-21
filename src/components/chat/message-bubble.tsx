@@ -11,7 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useChatStore, type ChatMessage } from '@/stores/chat-store'
+import { useChatStore, type ChatMessage } from '../../stores/chat'
 import { useTranslation } from '@/lib/i18n'
 import { SourceReference } from './source-reference'
 import { FeedbackButtons } from './feedback-buttons'
