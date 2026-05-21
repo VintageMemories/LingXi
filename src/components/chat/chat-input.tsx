@@ -17,7 +17,6 @@ interface ChatInputProps {
 }
 
 const MAX_CHARS = 2000
-const MAX_RECORD_TIME = 10000 // 最多录制 10 秒
 
 const promptSuggestionKeys: Record<string, { icon: string; textKey: string }[]> = {
     medical: [
@@ -58,17 +57,12 @@ export function ChatInput({ onSend, onStop, isStreaming, onTyping, onStopTyping 
 
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const voiceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const maxRecordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const userStoppedRef = useRef(false) // 标记是否用户手动停止
-    const accumulatedTextRef = useRef('') // 已识别的完整文本
-
-    const clearMaxRecordTimer = () => {
-        if (maxRecordTimerRef.current) {
-            clearTimeout(maxRecordTimerRef.current)
-            maxRecordTimerRef.current = null
-        }
-    }
+    const userStoppedRef = useRef(false)
+    const inputRef = useRef(input)
+    useEffect(() => { inputRef.current = input }, [input])
+    const finalTranscriptRef = useRef('')
+    const interimTranscriptRef = useRef('')
 
     const showVoiceHint = useCallback((message: string) => {
         setVoiceHint(message)
@@ -81,14 +75,16 @@ export function ChatInput({ onSend, onStop, isStreaming, onTyping, onStopTyping 
             recognitionRef.current.stop()
         }
         setIsListening(false)
-        clearMaxRecordTimer()
         if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current)
             silenceTimerRef.current = null
         }
+        if (!userStoppedRef.current && !finalTranscriptRef.current.trim() && !inputRef.current.trim()) {
+            showVoiceHint('未检测到语音，请点击按钮后开始说话')
+        }
         userStoppedRef.current = true
-        accumulatedTextRef.current = ''
-    }, [])
+        interimTranscriptRef.current = ''
+    }, [showVoiceHint])
 
     const startListening = useCallback(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -103,55 +99,75 @@ export function ChatInput({ onSend, onStop, isStreaming, onTyping, onStopTyping 
         recognition.interimResults = true
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
-            // 清除静默定时器（只要还在说话，就不该停止）
             if (silenceTimerRef.current) {
                 clearTimeout(silenceTimerRef.current)
                 silenceTimerRef.current = null
             }
 
-            // 只处理最终结果，避免重复追加
-            let newText = ''
+            let newFinal = ''
+            let newInterim = ''
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const result = event.results[i]
                 if (result.isFinal) {
-                    newText += result[0].transcript
+                    newFinal += result[0].transcript
+                } else {
+                    newInterim += result[0].transcript
                 }
             }
-            if (newText) {
-                const current = accumulatedTextRef.current
-                // 防止重复：如果当前累积文本已经以 newText 结尾，则不追加
-                if (!current.endsWith(newText)) {
-                    accumulatedTextRef.current = current + newText
+
+            if (newFinal) {
+                const current = finalTranscriptRef.current
+                if (!current.endsWith(newFinal)) {
+                    finalTranscriptRef.current = current + newFinal
                 }
-                setInput(accumulatedTextRef.current)
+                interimTranscriptRef.current = ''
             }
+
+            if (newInterim) {
+                interimTranscriptRef.current = newInterim
+            }
+
+            setInput(finalTranscriptRef.current + interimTranscriptRef.current)
+            if (textareaRef.current) {
+                textareaRef.current.focus()
+            }
+
+            // 每次收到结果后重置静默定时器：2.5 秒内无新结果则自动停止
+            silenceTimerRef.current = setTimeout(() => {
+                stopListening()
+            }, 2500)
         }
 
         recognition.onerror = (event: Event) => {
             const errorMsg = (event as any)?.error || 'unknown'
             console.warn('[Voice] 识别错误:', errorMsg)
-            if (errorMsg === 'aborted') return
-            if (errorMsg === 'no-speech') {
-                showVoiceHint('未检测到语音，请确认麦克风未被占用')
-            } else if (errorMsg === 'not-allowed') {
+            if (errorMsg === 'aborted' || errorMsg === 'no-speech') return
+            if (errorMsg === 'not-allowed') {
                 showVoiceHint('麦克风权限未开启，请在浏览器设置中允许访问麦克风')
+                stopListening()
             } else {
                 showVoiceHint('语音识别失败，请重试')
+                stopListening()
             }
-            stopListening()
         }
 
         recognition.onend = () => {
             if (userStoppedRef.current) return
 
-            // 启动 1.5 秒静默定时器，超时后真正停止
-            silenceTimerRef.current = setTimeout(() => {
-                stopListening()
-            }, 1500)
+            const savedText = finalTranscriptRef.current + interimTranscriptRef.current
 
-            // 立即重启识别，以便继续接收后续语音
             try {
                 recognition.start()
+                finalTranscriptRef.current = savedText
+                interimTranscriptRef.current = ''
+                setInput(savedText)
+                if (textareaRef.current) {
+                    textareaRef.current.focus()
+                }
+                // 重启后启动静默定时器，防止无限运行
+                silenceTimerRef.current = setTimeout(() => {
+                    stopListening()
+                }, 2500)
             } catch {
                 stopListening()
             }
@@ -163,23 +179,23 @@ export function ChatInput({ onSend, onStop, isStreaming, onTyping, onStopTyping 
             recognition.start()
             setIsListening(true)
             userStoppedRef.current = false
-            accumulatedTextRef.current = ''
+            finalTranscriptRef.current = input || ''
+            interimTranscriptRef.current = ''
             if (silenceTimerRef.current) {
                 clearTimeout(silenceTimerRef.current)
                 silenceTimerRef.current = null
             }
             setVoiceHint(null)
 
-            // 设置最大录音超时
-            clearMaxRecordTimer()
-            maxRecordTimerRef.current = setTimeout(() => {
+            // 启动静默定时器，不说话 2.5 秒自动停止
+            silenceTimerRef.current = setTimeout(() => {
                 stopListening()
-            }, MAX_RECORD_TIME)
+            }, 2500)
         } catch (e) {
             console.error('[Voice] start 异常:', e)
             showVoiceHint('语音识别启动失败，请重试')
         }
-    }, [showVoiceHint, stopListening])
+    }, [showVoiceHint, stopListening, input])
 
     const toggleVoiceInput = useCallback(() => {
         if (isListening) {
@@ -267,13 +283,11 @@ export function ChatInput({ onSend, onStop, isStreaming, onTyping, onStopTyping 
 
     const canSend = input.trim().length > 0 || uploadedImages.length > 0
 
-    // 组件卸载时清理
     useEffect(() => {
         return () => {
             if (recognitionRef.current) {
                 recognitionRef.current.stop()
             }
-            clearMaxRecordTimer()
         }
     }, [])
 
