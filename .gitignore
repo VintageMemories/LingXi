@@ -119,7 +119,7 @@ node_modules/.prisma/
 # ----------------------------------------
 backend/*.db
 backend/*.db-journal
-server/__pycache__/
+backend/__pycache__/
 
 # ----------------------------------------
 # 数据导入工具 (tools/)
@@ -129,4 +129,4 @@ tools/__pycache__/
 # ----------------------------------------
 # 模型文件 (原始目录被忽略，使用 model.zip 分发)
 # ----------------------------------------
-server/models/multilingual-e5-small/
+backend/models/multilingual-e5-small/
