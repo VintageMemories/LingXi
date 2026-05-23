@@ -83,6 +83,7 @@ from core.safety.guard import SafetyGuard
 from core.domain.manager import domain_manager
 from core.retrieval.hybrid import HybridRetriever
 from core.agent.graph import create_agent_graph, AgentState
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 router = APIRouter()
 _safety_guard = SafetyGuard()
@@ -119,8 +120,25 @@ async def chat(request: Request):
             await flush()
         return StreamingResponse(err_gen(), media_type="text/event-stream")
 
+    # ======== 构建包含历史的分类上下文（用于意图与安全） ========
+    context_text = message
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT content FROM Message WHERE sessionId = ? AND role = 'user' ORDER BY createdAt ASC LIMIT 3",
+            (session_id,)
+        ).fetchall()
+        if rows:
+            prev = [r["content"] for r in rows if r["content"] != message]
+            if prev:
+                context_text = " ".join(prev[-2:]) + " " + message
+        conn.close()
+    except Exception:
+        pass
+
     # 第一步：安全过滤（使用本地模型语义分类）
-    safety_result = _safety_guard.check(message, config)
+    safety_result = _safety_guard.check(context_text, config)
 
     if safety_result["blocked"]:
         async def blocked_gen():
@@ -141,39 +159,41 @@ async def chat(request: Request):
         return StreamingResponse(emergency_gen(), media_type="text/event-stream")
 
     # 领域越界检测：问题领域 ≠ 当前助手领域
-    intent = safety_result.get("intent", "")
-    intent_domain = None
-    if intent.startswith("medical_"):
-        intent_domain = "medical"
-    elif intent.startswith("legal_"):
-        intent_domain = "legal"
-    elif intent.startswith("finance_"):
-        intent_domain = "finance"
+    # Agent 流程具备自主切换工具的能力，不强制拦截
+    if user_plan != "agent":
+        intent = safety_result.get("intent", "")
+        intent_domain = None
+        if intent.startswith("medical_"):
+            intent_domain = "medical"
+        elif intent.startswith("legal_"):
+            intent_domain = "legal"
+        elif intent.startswith("finance_"):
+            intent_domain = "finance"
 
-    if intent == "out_of_domain":
-        async def out_of_domain_gen():
-            msg = "⚠️ 您的问题超出了我目前的知识范围。\n\n我是医小助（医疗）、法小助（法律）、金小助（金融）领域的智能助手，请尝试咨询这些领域的问题。"
-            for chunk in _stream_text(msg):
-                yield chunk
+        if intent == "out_of_domain":
+            async def out_of_domain_gen():
+                msg = "⚠️ 您的问题超出了我目前的知识范围。\n\n我是医小助（医疗）、法小助（法律）、金小助（金融）领域的智能助手，请尝试咨询这些领域的问题。"
+                for chunk in _stream_text(msg):
+                    yield chunk
+                    await flush()
+                yield _done("out_of_domain", session_id, classified_intent=intent)
                 await flush()
-            yield _done("out_of_domain", session_id, classified_intent=intent)
-            await flush()
-        return StreamingResponse(out_of_domain_gen(), media_type="text/event-stream")
+            return StreamingResponse(out_of_domain_gen(), media_type="text/event-stream")
 
-    if intent_domain and intent_domain != domain:
-        domain_names = {"medical": "医小助", "legal": "法小助", "finance": "金小助"}
-        current_name = domain_names.get(domain, domain)
-        suggested_name = domain_names.get(intent_domain, intent_domain)
-        async def cross_domain_gen():
-            msg = f"⚠️ 您的问题属于【{suggested_name}】领域，建议切换到 {suggested_name} 后再咨询。\n\n当前您在【{current_name}】下，可以点击左上角切换领域。"
-            for chunk in _stream_text(msg):
-                yield chunk
+        if intent_domain and intent_domain != domain:
+            domain_names = {"medical": "医小助", "legal": "法小助", "finance": "金小助"}
+            current_name = domain_names.get(domain, domain)
+            suggested_name = domain_names.get(intent_domain, intent_domain)
+            async def cross_domain_gen():
+                msg = f"⚠️ 您的问题属于【{suggested_name}】领域，建议切换到 {suggested_name} 后再咨询。\n\n当前您在【{current_name}】下，可以点击左上角切换领域。"
+                for chunk in _stream_text(msg):
+                    yield chunk
+                    await flush()
+                yield _done("cross_domain", session_id,
+                            classified_intent=intent,
+                            suggested_domain=intent_domain)
                 await flush()
-            yield _done("cross_domain", session_id,
-                        classified_intent=intent,
-                        suggested_domain=intent_domain)
-            await flush()
-        return StreamingResponse(cross_domain_gen(), media_type="text/event-stream")
+            return StreamingResponse(cross_domain_gen(), media_type="text/event-stream")
 
     # 第二步：根据订阅方案分流
     if user_plan == "agent":
@@ -454,11 +474,33 @@ async def _handle_pro(request: Request, message: str, domain: str, session_id: s
 async def _handle_agent(request: Request, message: str, domain: str, session_id: str,
                         llm_config: dict, is_new_session: bool):
     """Agent 版：LLM 自主决定调用工具、检索知识库、循环直到能回答"""
+    # 读取历史消息作为上下文
+    context_messages = []
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT role, content FROM Message WHERE sessionId = ? ORDER BY createdAt ASC LIMIT 10",
+            (session_id,)
+        ).fetchall()
+        for r in rows:
+            role = r["role"]
+            content = r["content"]
+            if len(content) > 500:
+                content = content[:500] + "..."
+            if role == "user":
+                context_messages.append(HumanMessage(content=content))
+            else:
+                context_messages.append(AIMessage(content=content))
+        conn.close()
+    except Exception:
+        pass
+
     initial_state: AgentState = {
         "query": message,
         "domain": domain,
         "session_id": session_id,
-        "messages": [],
+        "messages": context_messages,
         "safety_blocked": False,
         "safety_message": "",
         "safety_emergency": False,
@@ -470,9 +512,13 @@ async def _handle_agent(request: Request, message: str, domain: str, session_id:
         "final_answer": "",
         "loop_count": 0,
         "llm_config": llm_config,
+        "tool_call_history": [],
     }
 
     async def event_generator():
+        yield _sse("start", {"message": "正在处理..."})
+        await flush()
+
         if not llm_config.get("api_key"):
             for chunk in _stream_text("⚠️ 您还没有配置 API Key。请前往设置 → 模型页面，选择大模型提供商并填写 API Key。"):
                 yield chunk
@@ -490,95 +536,97 @@ async def _handle_agent(request: Request, message: str, domain: str, session_id:
             return
 
         graph = create_agent_graph()
-        last_node = ""
         full_answer = ""
         final_sources = []
 
-        # 创建取消事件和监听客户端断开的后台任务
         from core.llm.factory import create_llm_from_config
-        llm_temp = create_llm_from_config(llm_config)  # 仅用于获取异步客户端
+        llm_temp = create_llm_from_config(llm_config)
         cancel_event = asyncio.Event()
         async def watch_disconnect():
             while not cancel_event.is_set():
                 if await request.is_disconnected():
                     cancel_event.set()
-                    print("[Agent] 客户端断开，正在关闭 LLM HTTP 连接...")
                     try:
                         await llm_temp.http_async_client.aclose()
-                        print("[Agent] LLM HTTP 连接已关闭")
                     except Exception:
-                        print("[Agent] 关闭 LLM HTTP 连接时出错（可忽略）")
+                        pass
                     break
                 await asyncio.sleep(0.1)
         cancel_task = asyncio.ensure_future(watch_disconnect())
 
         try:
-            async for event in graph.astream(initial_state):
+            async for event in graph.astream(initial_state, config={"recursion_limit": 50}):
                 if cancel_event.is_set():
                     full_answer += " [已中断]"
                     break
                 for node_name, node_data in event.items():
-                    if node_name != last_node:
-                        last_node = node_name
-
-                        if node_name == "execute_tool":
-                            tool_name = node_data.get("tool_name", "")
-                            yield _sse("tool_start", {
-                                "tools": [tool_name.replace("USE_TOOL:", "").strip()],
-                                "message": "正在分析您的问题..."
-                            })
-                            await flush()
-
-                        elif node_name == "search_knowledge":
-                            yield _sse("retrieval_start", {"message": "正在检索知识库..."})
-                            await flush()
-
-                        elif node_name == "generate_answer":
-                            answer = node_data.get("final_answer", "")
-                            if answer:
-                                full_answer = answer
-                                final_sources = node_data.get("sources", [])
-                                for chunk in _stream_text(answer):
-                                    yield chunk
-                                    await flush()
-
-                        elif node_name == "safety_check":
-                            if node_data.get("safety_blocked"):
-                                msg = node_data.get("safety_message", "")
-                                full_answer = msg
-                                for chunk in _stream_text(msg):
-                                    yield chunk
-                                    await flush()
-
-                        elif node_name == "emergency_response":
-                            answer = node_data.get("final_answer", "")
-                            full_answer = answer
-                            for chunk in _stream_text(answer):
+                    if node_name == "safety_check":
+                        if node_data.get("safety_blocked"):
+                            msg = node_data.get("safety_message", "")
+                            full_answer = msg
+                            for chunk in _stream_text(msg):
                                 yield chunk
                                 await flush()
-
-            cancel_task.cancel()
-            try: await cancel_task
-            except asyncio.CancelledError: pass
-
-            # 持久化消息，确保历史可查
-            _save_message(session_id, "user", message)
-            _save_message(session_id, "assistant", full_answer,
-                          model=llm_config.get("model", ""),
-                          intent="agent",
-                          sources=json.dumps(final_sources) if final_sources else "")
-
-            yield _sse("done", {
-                "intent": "agent",
-                "confidence": 0.9,
-                "sources": final_sources,
-                "from_llm": True,
-            })
-            await flush()
-
+                    elif node_name == "emergency_response":
+                        answer = node_data.get("final_answer", "")
+                        full_answer = answer
+                        for chunk in _stream_text(answer):
+                            yield chunk
+                            await flush()
+                    elif node_name == "agent":
+                        # agent 节点返回 final_answer 时直接推送
+                        if node_data.get("final_answer"):
+                            full_answer = node_data["final_answer"]
+                            for chunk in _stream_text(full_answer):
+                                yield chunk
+                                await flush()
+                    elif node_name == "tools":
+                        # 从 ToolNode 输出中提取工具名称
+                        msgs = node_data.get("messages", [])
+                        tool_names = []
+                        for msg in msgs:
+                            if hasattr(msg, "name") and msg.name:
+                                tool_names.append(msg.name)
+                        if tool_names:
+                            tool_list_str = ", ".join(tool_names)
+                            print(f"[Agent] 调用工具: {tool_list_str}")
+                            yield _sse("tool_start", {
+                                "tools": tool_names,
+                                "message": f"正在调用工具: {tool_list_str}"
+                            })
+                        else:
+                            yield _sse("tool_start", {"message": "正在分析您的问题..."})
+                        await flush()
         except Exception as e:
             yield _sse("error", {"message": f"处理失败: {str(e)}"})
             await flush()
+
+        cancel_task.cancel()
+        try:
+            await cancel_task
+        except asyncio.CancelledError:
+            pass
+
+        # 最终兜底
+        if not full_answer or not full_answer.strip():
+            full_answer = f"很抱歉，我暂时无法处理您的问题「{message}」。请稍后重试或尝试更明确的提问。"
+            for chunk in _stream_text(full_answer):
+                yield chunk
+                await flush()
+
+        _save_message(session_id, "user", message)
+        _save_message(session_id, "assistant", full_answer,
+                      model=llm_config.get("model", ""),
+                      intent="agent",
+                      sources=json.dumps(final_sources) if final_sources else "")
+
+        yield _sse("done", {
+            "intent": "agent",
+            "confidence": 0.9,
+            "sources": final_sources,
+            "from_llm": True,
+        })
+        await flush()
 
     return StreamingResponse(
         event_generator(),

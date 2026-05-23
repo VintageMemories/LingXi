@@ -24,3 +24,4 @@ class AgentState(TypedDict):
     final_answer: str
     loop_count: int
     llm_config: dict
+    tool_call_history: List[str]

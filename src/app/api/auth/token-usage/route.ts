@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
-    const { userId, tokenUsage } = await request.json()
+    const { userId: rawUserId, tokenUsage } = await request.json()
+    const userId = rawUserId?.trim()
     if (!userId) return Response.json({ error: '缺少 userId' }, { status: 400 })
 
     const data: Record<string, any> = {}
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-    const userId = new URL(request.url).searchParams.get('userId')
+    const userId = new URL(request.url).searchParams.get('userId')?.trim()
     if (!userId) return Response.json({ error: '缺少 userId' }, { status: 400 })
 
     const user = await db.user.findUnique({ where: { id: userId } })
@@ -40,7 +41,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-    const { userId } = await request.json()
+    const { userId: rawUserId } = await request.json()
+    const userId = rawUserId?.trim()
     if (!userId) return Response.json({ error: '缺少 userId' }, { status: 400 })
 
     await db.user.update({

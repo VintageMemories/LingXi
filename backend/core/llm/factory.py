@@ -13,7 +13,28 @@ def _build_llm(config: dict):
     api_key = config.get("api_key") or os.getenv("LLM_API_KEY", "")
     base_url = config.get("api_base") or os.getenv("LLM_API_BASE", "https://api.deepseek.com")
     base_url = base_url.rstrip("/")
+    provider = config.get("provider", "deepseek")
 
+    timeout = httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=5.0)
+
+    # DeepSeek 模型：优先使用 langchain_deepseek 原生库，正确处理推理模式
+    if provider == "deepseek" or "deepseek" in base_url:
+        try:
+            from langchain_deepseek import ChatDeepSeek
+            llm = ChatDeepSeek(
+                model=model,
+                api_key=api_key,
+                api_base=base_url,
+                temperature=0.7,
+                timeout=60,
+            )
+            llm.http_client = httpx.Client(verify=False, timeout=timeout)
+            llm.http_async_client = httpx.AsyncClient(verify=False, timeout=timeout)
+            return llm
+        except ImportError:
+            pass  # 回退到 init_chat_model
+
+    # 非 DeepSeek 模型，使用 init_chat_model
     llm = init_chat_model(
         model,
         model_provider="openai",
@@ -22,7 +43,6 @@ def _build_llm(config: dict):
         temperature=0.7,
     )
 
-    timeout = httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=5.0)
     llm.http_client = httpx.Client(verify=False, timeout=timeout)
     llm.http_async_client = httpx.AsyncClient(verify=False, timeout=timeout)
     return llm

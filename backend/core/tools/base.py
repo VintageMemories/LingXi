@@ -27,6 +27,24 @@ class BaseTool(ABC):
         """所属领域：builtin / medical / legal / finance"""
         pass
 
+    @property
+    def parameters_schema(self) -> Dict[str, Any]:
+        """
+        返回工具的输入参数 JSON Schema。
+        默认所有工具只接受一个 query 字符串，
+        子类可以覆盖此属性以声明更复杂的参数结构。
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "需要传递给工具的查询内容，包含所有必要的信息"
+                }
+            },
+            "required": ["query"]
+        }
+
     @abstractmethod
     def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """

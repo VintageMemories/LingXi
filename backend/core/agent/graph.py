@@ -1,18 +1,18 @@
 """
-Agent 决策图
-安全过滤 → LLM 思考 → 执行工具/检索 → 再思考 → 生成回答
+Agent 决策图（手动 ReAct 循环 + 反思可见）
+安全过滤 → LLM 反思 → 工具执行（循环）→ 生成回答
 """
-
+import json
+import os
 from typing import List
 from langgraph.graph import StateGraph, END
-from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.prebuilt import ToolNode
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from core.agent.state import AgentState
 from core.llm.factory import create_llm
 from core.safety.guard import SafetyGuard
 from core.domain.manager import domain_manager
-from core.tools.executor import ToolExecutor
-from core.retrieval.hybrid import HybridRetriever
-
+from core.tools.registry import ToolRegistry
 
 _safety_guard = SafetyGuard()
 
@@ -44,142 +44,169 @@ def emergency_response_node(state: AgentState) -> dict:
     return {"final_answer": msg}
 
 
-def agent_think_node(state: AgentState) -> dict:
-    """LLM 自主决策下一步操作"""
-    config = domain_manager.get_domain_config(state["domain"])
-    tools = config.get("tools", [])
-
-    tools_list = [f"- {t['name']}: {t.get('description', '')}" for t in tools]
-    tools_list.append("- search_knowledge: 搜索专业知识库")
-    tools_list.append("- answer: 信息已足够，直接回答用户")
-
-    prompt = f"""你是专业的AI助手。根据用户问题决定下一步行动。
-
-当前领域：{config.get('domain', {}).get('display_name', '')}
-
-可用操作：
-{chr(10).join(tools_list)}
-
-用户问题：{state['query']}
-
-已有信息：
-工具结果：{state.get('tool_result', '') or '无'}
-知识库：{state.get('rag_context', '') or '无'}
-
-已循环次数：{state.get('loop_count', 0)} / 5
-
-请只回复以下格式之一：
-ANSWER
-USE_TOOL: <工具名>
-SEARCH_KNOWLEDGE"""
-
-    llm = create_llm(state)
-    response = llm.invoke([HumanMessage(content=prompt)])
-    decision = response.content.strip()
-    print(f"[Agent Think] 循环 {state.get('loop_count', 0) + 1}, LLM 决策: {decision}")
-
-    return {
-        "tool_name": decision,
-        "loop_count": state.get("loop_count", 0) + 1,
-    }
-
-
-def route_agent_action(state: AgentState) -> str:
-    decision = state.get("tool_name", "")
-    if decision.startswith("USE_TOOL"):
-        return "execute_tool"
-    if "SEARCH_KNOWLEDGE" in decision:
-        return "search_knowledge"
-    return "generate_answer"
-
-
-def execute_tool_node(state: AgentState) -> dict:
-    """执行 LLM 选择的领域工具"""
-    config = domain_manager.get_domain_config(state["domain"])
-    executor = ToolExecutor(config)
-
-    tool_name = state.get("tool_name", "").replace("USE_TOOL:", "").strip()
-    result = executor.execute(tool_name, state["query"])
-
-    return {
-        "tool_result": result["data"] if result["success"] else f"工具执行失败: {result['data']}"
-    }
-
-
-def search_knowledge_node(state: AgentState) -> dict:
-    """从知识库检索相关内容"""
-    config = domain_manager.get_domain_config(state["domain"])
-    retriever = HybridRetriever()
-    results = retriever.search(state["query"])
-
-    if results:
-        context = "\n\n".join(
-            f"[{i+1}] {r['title']}\n{r.get('content', '')}" for i, r in enumerate(results)
-        )
-        sources: List[dict] = [{"title": r["title"], "source": r.get("source", "unknown")} for r in results]
-        return {"rag_context": context, "sources": sources}
-
-    return {"rag_context": "", "sources": []}
-
-
-def generate_answer_node(state: AgentState) -> dict:
-    """汇总所有信息生成最终回答"""
-    config = domain_manager.get_domain_config(state["domain"])
-    domain_name = config.get("domain", {}).get("display_name", "智能助手")
-    system_prompt = (config.get("prompts", {}) or {}).get(
-        "system", f"你是{domain_name}，请基于提供的信息回答用户问题"
+def _get_system_prompt(domain: str) -> str:
+    """获取领域系统提示词"""
+    config = domain_manager.get_domain_config(domain)
+    return (config.get("prompts", {}) or {}).get(
+        "system", f"你是{domain}领域的助手，请基于提供的信息回答用户问题。"
     )
 
-    parts = []
-    if state.get("tool_result"):
-        parts.append(f"【工具分析结果】\n{state['tool_result']}")
-    if state.get("rag_context"):
-        parts.append(f"【知识库参考资料】\n{state['rag_context']}")
 
-    user_prompt = state["query"]
-    if parts:
-        user_prompt = f"{chr(10).join(parts)}\n\n【用户问题】\n{state['query']}"
+def _build_tool_schemas(domain: str) -> List[dict]:
+    """构建原生 function calling 格式的工具 schema 列表"""
+    from core.tools.registry import ToolRegistry
+    tools = ToolRegistry.list_by_domain(domain)
+    schemas = []
+    for t in tools:
+        schemas.append({
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t["description"],
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "传给工具的完整查询字符串"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        })
+    return schemas
 
+
+def agent_node(state: AgentState) -> dict:
+    """LLM 反思 + 决策节点：输出思考过程，然后给出结构化行动"""
     llm = create_llm(state)
-    response = llm.invoke([
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt),
-    ])
+    system_prompt = _get_system_prompt(state["domain"])
+    tool_schemas = _build_tool_schemas(state["domain"])
 
-    return {"final_answer": response.content}
+    # 构建历史消息
+    messages = [SystemMessage(content=system_prompt)]
+    for msg in state.get("messages", []):
+        if isinstance(msg, (HumanMessage, AIMessage, ToolMessage)):
+            messages.append(msg)
+
+    # 统计已调用工具次数（从 AIMessage 的 tool_calls 数量）
+    tool_call_count = sum(
+        1 for m in messages if isinstance(m, AIMessage) and hasattr(m, "tool_calls") and m.tool_calls
+    )
+    max_tool_calls = 5
+    remaining = max_tool_calls - tool_call_count
+
+    if remaining <= 0:
+        answer = f"已达到工具调用上限（{max_tool_calls}次），请基于已有信息回答用户问题：{state['query']}"
+        print(f"[Agent] 工具调用已达上限 {max_tool_calls}，强制回答")
+        return {"final_answer": answer, "messages": []}
+
+    # 反思提示词，要求 LLM 先分析再给出行动 JSON
+    reflection_prompt = (
+        f"【第 {tool_call_count + 1}/{max_tool_calls} 次决策】\n"
+        "请严格按以下步骤操作：\n"
+        "1. 先评估上一次工具调用返回的结果（如果有）。如果结果已足够，直接给出最终回答。\n"
+        "2. 如果结果不足，解释需要补充什么信息，然后选择一个合适的工具调用。\n"
+        "3. 绝对不要重复调用同一个工具。\n"
+        "4. 最终回答时，请用专业、清晰的语言回答。\n\n"
+        "输出格式要求：\n"
+        "- 如果直接回答，在消息开头写上 [最终回答]，然后输出你的回答。\n"
+        "- 如果需要调用工具，在消息开头写上 [调用工具]，然后紧跟一行 JSON，格式如下：\n"
+        '{"tool_name": "工具名", "arguments": {"query": "完整查询字符串"}}\n'
+        f"用户问题：{state['query']}"
+    )
+    messages.append(HumanMessage(content=reflection_prompt))
+
+    # 调用 LLM（不绑定工具，完全依靠 prompt 控制输出格式）
+    response = llm.invoke(messages)
+    content = response.content if hasattr(response, "content") else ""
+
+    # 解析 LLM 输出
+    if not content:
+        # 空响应，兜底
+        print("[Agent] LLM 返回空内容，强制回答")
+        return {"final_answer": "很抱歉，我暂时无法处理您的问题。", "messages": []}
+
+    content_stripped = content.strip()
+    print(f"[Agent] 第 {tool_call_count + 1} 次决策输出: {content_stripped[:200]}...")
+
+    if content_stripped.startswith("[最终回答]"):
+        # 提取答案（去掉 [最终回答] 标记）
+        answer = content_stripped[len("[最终回答]"):].strip()
+        if not answer:
+            answer = "很抱歉，我暂时无法回答您的问题。"
+        print(f"[Agent] 第 {tool_call_count + 1} 次决策：直接回答，长度 {len(answer)}")
+        return {"final_answer": answer, "messages": [AIMessage(content=content_stripped)]}
+
+    elif content_stripped.startswith("[调用工具]"):
+        # 尝试提取 JSON
+        try:
+            # 找到第一个 '{' 开始的 JSON 字符串
+            json_start = content_stripped.index('{')
+            json_str = content_stripped[json_start:]
+            tool_info = json.loads(json_str)
+            tool_name = tool_info.get("tool_name", "")
+            arguments = tool_info.get("arguments", {})
+            if not tool_name:
+                raise ValueError("缺少 tool_name")
+
+            # 构造一个 AIMessage 包含一个 tool_call，以便 ToolNode 执行
+            tool_call_msg = AIMessage(
+                content=content_stripped,  # 保留完整反思内容
+                tool_calls=[{
+                    "name": tool_name,
+                    "args": arguments,
+                    "id": f"call_{tool_call_count}"
+                }]
+            )
+            print(f"[Agent] 第 {tool_call_count + 1} 次决策调用: {tool_name}")
+            return {"messages": [tool_call_msg]}
+        except (json.JSONDecodeError, ValueError, IndexError) as e:
+            print(f"[Agent] 解析工具调用 JSON 失败: {e}")
+            # 如果解析失败，当做最终回答处理
+            return {"final_answer": content_stripped, "messages": [AIMessage(content=content_stripped)]}
+
+    else:
+        # 格式不符合预期，按最终回答处理
+        print("[Agent] 输出格式不符合预期，按回答处理")
+        return {"final_answer": content_stripped, "messages": [AIMessage(content=content_stripped)]}
+
+
+def route_after_agent(state: AgentState) -> str:
+    """Agent 节点后的路由：有 final_answer 则结束，有 tool_calls 则执行工具"""
+    if state.get("final_answer"):
+        return "end"
+    last_msg = state["messages"][-1] if state.get("messages") else None
+    if last_msg and hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+        return "tools"
+    return "end"
 
 
 def create_agent_graph():
-    """构建并编译 Agent 决策图"""
+    """构建手动 ReAct 循环的 Agent 图"""
     workflow = StateGraph(AgentState)
+
+    # 获取所有医疗工具（用于 ToolNode）
+    tools = ToolRegistry.get_langchain_tools("medical")
 
     workflow.add_node("safety_check", safety_check_node)
     workflow.add_node("emergency_response", emergency_response_node)
-    workflow.add_node("agent_think", agent_think_node)
-    workflow.add_node("execute_tool", execute_tool_node)
-    workflow.add_node("search_knowledge", search_knowledge_node)
-    workflow.add_node("generate_answer", generate_answer_node)
+    workflow.add_node("agent", agent_node)
+    workflow.add_node("tools", ToolNode(tools))
 
     workflow.set_entry_point("safety_check")
 
     workflow.add_conditional_edges(
         "safety_check", route_safety,
-        {"blocked": END, "emergency": "emergency_response", "safe": "agent_think"}
+        {"blocked": END, "emergency": "emergency_response", "safe": "agent"}
     )
-
     workflow.add_edge("emergency_response", END)
 
     workflow.add_conditional_edges(
-        "agent_think", route_agent_action,
-        {
-            "execute_tool": "execute_tool",
-            "search_knowledge": "search_knowledge",
-            "generate_answer": "generate_answer",
-        }
+        "agent", route_after_agent,
+        {"tools": "tools", "end": END}
     )
-
-    workflow.add_edge("execute_tool", "agent_think")
-    workflow.add_edge("search_knowledge", "agent_think")
-    workflow.add_edge("generate_answer", END)
+    workflow.add_edge("tools", "agent")  # 工具执行后回到 agent 继续反思
 
     return workflow.compile()

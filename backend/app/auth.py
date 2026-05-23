@@ -92,7 +92,7 @@ async def auth_handler(request: AuthRequest):
 
         user_id = str(uuid.uuid4())
         name = request.name or request.email.split("@")[0]
-        now = datetime.utcnow().isoformat()
+        now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
         conn.execute(
             "INSERT INTO User (id, email, name, passwordHash, plan, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",

@@ -3,10 +3,16 @@ import { db } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
     try {
-        const { code, userId } = await request.json()
+        const { code, userId: rawUserId } = await request.json()
+        // 去除不可见字符并验证 UUID 格式
+        const userId = rawUserId?.trim()
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
         if (!code || !userId) {
             return Response.json({ error: '缺少参数' }, { status: 400 })
+        }
+        if (!uuidRegex.test(userId)) {
+            return Response.json({ error: '用户ID格式无效' }, { status: 400 })
         }
 
         const activationCode = await db.activationCode.findUnique({

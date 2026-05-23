@@ -160,7 +160,7 @@ export function useSSEChat() {
 
           const decoder = new TextDecoder()
           let buffer = ''
-          const READ_TIMEOUT = 60000 // 60 秒整体超时
+          const READ_TIMEOUT = 120000 // 60 秒整体超时
 
           while (true) {
             const timeoutPromise = new Promise<ReadableStreamReadResult<Uint8Array>>((_, reject) =>

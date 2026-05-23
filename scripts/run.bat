@@ -5,7 +5,7 @@ taskkill /F /IM python.exe >nul 2>&1
 timeout /t 2 /nobreak >nul
 
 echo Starting Backend...
-start "Lingxi-Backend" cmd /c "cd /d %~dp0..\server && uv run main.py"
+start "Lingxi-Backend" cmd /c "cd /d %~dp0..\backend && uv run main.py"
 echo Waiting for backend to be ready on port 8000...
 
 :wait_backend

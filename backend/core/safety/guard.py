@@ -68,6 +68,16 @@ class SafetyGuard:
             }
 
         if intent == "emergency_legal":
+            if confidence < 0.7:  # 置信度不足时回退到正常意图
+                return {
+                    "blocked": False,
+                    "emergency": False,
+                    "emergency_type": None,
+                    "intent": "out_of_domain",
+                    "intent_description": result["description"],
+                    "confidence": confidence,
+                    "message": "",
+                }
             return {
                 "blocked": False,
                 "emergency": True,
