@@ -124,7 +124,7 @@ export function useSSEChat() {
               'X-API-Key': settings.apiKey,
               'X-API-Base-URL': settings.apiBaseUrl,
               'X-API-Provider': settings.apiProvider,
-              'X-User-Plan': useChatStore.getState().user?.plan || 'free',
+              'X-User-Plan': useChatStore.getState().currentMode || 'free',
             },
             body: JSON.stringify({
               message: content.trim(),

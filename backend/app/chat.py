@@ -59,19 +59,19 @@ def _save_message(session_id: str, role: str, content: str, model: str = "", int
         conn = sqlite3.connect(_DB_PATH)
         # 确保表存在（与 Prisma schema 一致）
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS Message (
-                id TEXT PRIMARY KEY,
-                sessionId TEXT NOT NULL,
-                role TEXT NOT NULL,
-                content TEXT NOT NULL,
-                model TEXT,
-                intent TEXT,
-                sources TEXT,
-                feedbackRating INTEGER,
-                feedbackComment TEXT,
-                createdAt DATETIME NOT NULL DEFAULT (datetime('now'))
-            )
-        """)
+                     CREATE TABLE IF NOT EXISTS Message (
+                                                            id TEXT PRIMARY KEY,
+                                                            sessionId TEXT NOT NULL,
+                                                            role TEXT NOT NULL,
+                                                            content TEXT NOT NULL,
+                                                            model TEXT,
+                                                            intent TEXT,
+                                                            sources TEXT,
+                                                            feedbackRating INTEGER,
+                                                            feedbackComment TEXT,
+                                                            createdAt DATETIME NOT NULL DEFAULT (datetime('now'))
+                         )
+                     """)
         msg_id = str(uuid.uuid4())
         conn.execute(
             "INSERT INTO Message (id, sessionId, role, content, model, intent, sources, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
@@ -85,6 +85,70 @@ def _save_message(session_id: str, role: str, content: str, model: str = "", int
         print(f"[DB] 消息已保存：session={session_id}, role={role}, len={len(content)}")
     except Exception as e:
         print(f"[DB] 保存消息失败: {e}")
+
+def _get_conversation_context(session_id: str, max_recent: int = 4) -> str:
+    """
+    从数据库读取历史消息，构建混合记忆上下文。
+    最近 max_recent 轮对话完整保留，更早的生成摘要。
+    """
+    if not session_id:
+        return ""
+
+    try:
+        conn = sqlite3.connect(_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT role, content FROM Message WHERE sessionId = ? ORDER BY createdAt ASC",
+            (session_id,)
+        ).fetchall()
+        conn.close()
+
+        if not rows:
+            return ""
+
+        # 每轮 = 一条 user + 一条 assistant，计算总轮数
+        total_pairs = len(rows) // 2
+
+        if total_pairs <= max_recent:
+            # 对话很短，全部保留
+            context = "## 对话历史\n"
+            for r in rows:
+                role = "用户" if r["role"] == "user" else "AI"
+                content = r["content"][:300]
+                context += f"- {role}: {content}\n"
+            return context
+
+        # 对话较长，生成早期摘要 + 完整保留近期
+        early_rows = rows[: -max_recent * 2]
+        recent_rows = rows[-max_recent * 2:]
+
+        # 构建早期摘要
+        early_text = ""
+        for r in early_rows:
+            role = "用户" if r["role"] == "user" else "AI"
+            early_text += f"{role}: {r['content'][:200]}\n"
+
+        summary_prompt = f"请将以下对话历史压缩为一段200字以内的摘要，保留关键信息：\n\n{early_text}"
+        try:
+            from langchain_core.messages import HumanMessage
+            from core.llm.factory import _build_llm
+            llm = _build_llm({})
+            summary_response = llm.invoke([HumanMessage(content=summary_prompt)])
+            summary = summary_response.content.strip()
+        except Exception:
+            summary = "（早期对话摘要生成失败）"
+
+        # 拼接上下文
+        context = f"## 早期对话摘要\n{summary}\n\n## 最近对话\n"
+        for r in recent_rows:
+            role = "用户" if r["role"] == "user" else "AI"
+            content = r["content"][:300]
+            context += f"- {role}: {content}\n"
+        return context
+
+    except Exception:
+        return ""
+
 import asyncio
 import jwt
 from fastapi import APIRouter, Request
@@ -249,6 +313,11 @@ async def _handle_free(request: Request, message: str, domain: str, session_id: 
                 "system", f"你是{domain_name}，请友好地回答用户问题。注意：你只能基于通用知识回答，不能提供专业建议。"
             )
 
+            # 获取对话历史上下文（混合记忆）
+            context = _get_conversation_context(session_id)
+            if context:
+                system_prompt = f"{system_prompt}\n\n{context}"
+
             from langchain_core.messages import SystemMessage, HumanMessage
             from core.llm.factory import create_llm_from_config
             import time
@@ -383,6 +452,11 @@ async def _handle_pro(request: Request, message: str, domain: str, session_id: s
             system_prompt = (config.get("prompts", {}) or {}).get(
                 "system", f"你是{domain_name}，请基于知识库回答用户问题"
             )
+
+            # 获取对话历史上下文（混合记忆）
+            context = _get_conversation_context(session_id)
+            if context:
+                system_prompt = f"{system_prompt}\n\n{context}"
 
             from langchain_core.messages import SystemMessage, HumanMessage
             from core.llm.factory import create_llm_from_config

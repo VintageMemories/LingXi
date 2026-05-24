@@ -193,6 +193,8 @@ interface ChatState {
     activeUsers: PresenceUser[]
     typingUsers: PresenceUser[]
     totalTokenUsage: TokenUsage
+    currentMode: string
+    setCurrentMode: (mode: string) => void
 
     setDomains: (domains: DomainInfo[]) => void
     setCurrentDomain: (domain: DomainInfo) => void
@@ -274,6 +276,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     activeUsers: [],
     typingUsers: [],
     totalTokenUsage: loadTotalTokenUsage(),
+    currentMode: 'free',
+    setCurrentMode: (mode) => set({ currentMode: mode }),
 
     setDomains: (domains) => set({ domains }),
     setCurrentDomain: (domain) => set({ currentDomain: domain, messages: [], sessionId: null }),
@@ -433,7 +437,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
     },
     setUser: (user) => {
-        set({ user })
+        set({ user, currentMode: user?.plan || 'free' })
         if (user?.id) {
             fetch(`/api/auth/token-usage?userId=${user.id}`)
                 .then(r => r.json())
@@ -472,7 +476,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         })
     },
     logout: () => {
-        set({ user: null })
+        set({ user: null, currentMode: 'free' })
         if (typeof window !== 'undefined') {
             localStorage.removeItem('lingxi_token')
             localStorage.removeItem('lingxi_user')

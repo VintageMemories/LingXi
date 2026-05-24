@@ -1,12 +1,19 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Send, Paperclip, Mic, X, Square, Sparkles } from 'lucide-react'
+import { Send, Paperclip, Mic, X, Square, Sparkles, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useChatStore } from '../../stores/chat'
 import { useTranslation } from '@/lib/i18n'
 import { useToast } from '@/hooks/use-toast'
 import { motion, AnimatePresence } from 'framer-motion'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 
 interface ChatInputProps {
     onSend: (message: string, images?: string[]) => void
@@ -53,6 +60,8 @@ export function ChatInput({ onSend, onStop, isStreaming, onTyping, onStopTyping 
     const removeUploadedImage = useChatStore((s) => s.removeUploadedImage)
     const clearImages = useChatStore((s) => s.clearImages)
     const currentDomain = useChatStore((s) => s.currentDomain)
+    const currentMode = useChatStore((s) => s.currentMode)
+    const setCurrentMode = useChatStore((s) => s.setCurrentMode)
     const { toast } = useToast()
 
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -436,6 +445,27 @@ export function ChatInput({ onSend, onStop, isStreaming, onTyping, onStopTyping 
                                     </motion.span>
                                 )}
                             </AnimatePresence>
+
+                            {/* 模式选择器：放在语音按钮右侧 */}
+                            <Select value={currentMode} onValueChange={setCurrentMode}>
+                                <SelectTrigger className="h-8 w-[130px] text-xs gap-1 rounded-md border-border/50 bg-transparent hover:bg-accent/50 transition-colors">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="free" className="text-xs">
+                                        <Crown className="h-3 w-3 inline mr-1" />
+                                        免费版
+                                    </SelectItem>
+                                    <SelectItem value="pro" className="text-xs" disabled={!useChatStore.getState().user || useChatStore.getState().user?.plan === 'free'}>
+                                        <Crown className="h-3 w-3 inline mr-1" />
+                                        Pro版
+                                    </SelectItem>
+                                    <SelectItem value="agent" className="text-xs" disabled={!useChatStore.getState().user || useChatStore.getState().user?.plan !== 'agent'}>
+                                        <Crown className="h-3 w-3 inline mr-1" />
+                                        Agent版
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="flex-1" />
