@@ -1,9 +1,8 @@
 """
-Agent 决策图（手动 ReAct 循环 + 反思可见）
-安全过滤 → LLM 反思 → 工具执行（循环）→ 生成回答
+LingXi Agent 决策图 v2.0 - 监督者模式 + 反思节点
+企业级提示词设计，简洁清晰，可观测性强
 """
 import json
-import os
 from typing import List
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
@@ -16,9 +15,8 @@ from core.tools.registry import ToolRegistry
 
 _safety_guard = SafetyGuard()
 
-
+# ───────────────────────── 安全节点 ─────────────────────────
 def safety_check_node(state: AgentState) -> dict:
-    """安全检测：识别敏感词和紧急情况"""
     config = domain_manager.get_domain_config(state["domain"])
     result = _safety_guard.check(state["query"], config)
     return {
@@ -27,7 +25,6 @@ def safety_check_node(state: AgentState) -> dict:
         "safety_emergency": result["emergency"],
     }
 
-
 def route_safety(state: AgentState) -> str:
     if state.get("safety_blocked"):
         return "blocked"
@@ -35,178 +32,198 @@ def route_safety(state: AgentState) -> str:
         return "emergency"
     return "safe"
 
-
 def emergency_response_node(state: AgentState) -> dict:
-    """紧急情况直接返回预设提示"""
     config = domain_manager.get_domain_config(state["domain"])
     prompts = config.get("prompts", {}) or {}
     msg = prompts.get("emergency", "检测到紧急情况，请立即就医")
     return {"final_answer": msg}
 
-
-def _get_system_prompt(domain: str) -> str:
-    """获取领域系统提示词"""
-    config = domain_manager.get_domain_config(domain)
-    return (config.get("prompts", {}) or {}).get(
-        "system", f"你是{domain}领域的助手，请基于提供的信息回答用户问题。"
-    )
-
-
-def _build_tool_schemas(domain: str) -> List[dict]:
-    """构建原生 function calling 格式的工具 schema 列表"""
-    from core.tools.registry import ToolRegistry
-    tools = ToolRegistry.list_by_domain(domain)
-    schemas = []
-    for t in tools:
-        schemas.append({
-            "type": "function",
-            "function": {
-                "name": t["name"],
-                "description": t["description"],
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "传给工具的完整查询字符串"
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
-        })
-    return schemas
-
-
-def agent_node(state: AgentState) -> dict:
-    """LLM 反思 + 决策节点：输出思考过程，然后给出结构化行动"""
+# ───────────────────────── 监督者节点 ─────────────────────────
+def supervisor_node(state: AgentState) -> dict:
+    """分析问题，决定：调用工具 或 直接回答。"""
     llm = create_llm(state)
-    system_prompt = _get_system_prompt(state["domain"])
-    tool_schemas = _build_tool_schemas(state["domain"])
+    domain = state["domain"]
+    config = domain_manager.get_domain_config(domain)
+    system_prompt = config.get("prompts", {}).get("system", f"你是{domain}领域的助手")
 
-    # 构建历史消息
-    messages = [SystemMessage(content=system_prompt)]
-    for msg in state.get("messages", []):
-        if isinstance(msg, (HumanMessage, AIMessage, ToolMessage)):
-            messages.append(msg)
+    tool_list = ToolRegistry.list_by_domain(domain)
+    tool_names = [t["name"] for t in tool_list]
+    tool_desc = "\n".join([f"- {t['name']}: {t['description'].split(chr(10))[0]}" for t in tool_list])
 
-    # 统计已调用工具次数（从 AIMessage 的 tool_calls 数量）
-    tool_call_count = sum(
-        1 for m in messages if isinstance(m, AIMessage) and hasattr(m, "tool_calls") and m.tool_calls
-    )
-    max_tool_calls = 5
-    remaining = max_tool_calls - tool_call_count
+    called_tools = state.get("tool_call_history", [])
+    called_tools_str = ", ".join(called_tools) if called_tools else "无"
+    reflection_hint = state.get("reflection_hint", "")
 
-    if remaining <= 0:
-        answer = f"已达到工具调用上限（{max_tool_calls}次），请基于已有信息回答用户问题：{state['query']}"
-        print(f"[Agent] 工具调用已达上限 {max_tool_calls}，强制回答")
-        return {"final_answer": answer, "messages": []}
+    hint_text = ""
+    if reflection_hint:
+        hint_text = f"\n【铁律】上一次反思节点明确建议：{reflection_hint}\n你必须严格按照此建议选择下一步工具。"
 
-    # 反思提示词，要求 LLM 先分析再给出行动 JSON
-    reflection_prompt = (
-        f"【第 {tool_call_count + 1}/{max_tool_calls} 次决策】\n"
-        "请严格按以下步骤操作：\n"
-        "1. 先评估上一次工具调用返回的结果（如果有）。如果结果已足够，直接给出最终回答。\n"
-        "2. 如果结果不足，解释需要补充什么信息，然后选择一个合适的工具调用。\n"
-        "3. 绝对不要重复调用同一个工具。\n"
-        "4. 最终回答时，请用专业、清晰的语言回答。\n\n"
-        "输出格式要求：\n"
-        "- 如果直接回答，在消息开头写上 [最终回答]，然后输出你的回答。\n"
-        "- 如果需要调用工具，在消息开头写上 [调用工具]，然后紧跟一行 JSON，格式如下：\n"
-        '{"tool_name": "工具名", "arguments": {"query": "完整查询字符串"}}\n'
-        f"用户问题：{state['query']}"
-    )
-    messages.append(HumanMessage(content=reflection_prompt))
+    prompt = f"""## 角色
+你是{domain}领域的智能助手。
 
-    # 调用 LLM（不绑定工具，完全依靠 prompt 控制输出格式）
-    response = llm.invoke(messages)
-    content = response.content if hasattr(response, "content") else ""
+## 可用工具
+{tool_desc}
 
-    # 解析 LLM 输出
-    if not content:
-        # 空响应，兜底
-        print("[Agent] LLM 返回空内容，强制回答")
-        return {"final_answer": "很抱歉，我暂时无法处理您的问题。", "messages": []}
+## 工具调用策略（严格遵守）
+1. 若问题需要专业信息（药物、疾病、政策等），必须调用工具。
+2. 如果工具已被尝试过且失败（见"已尝试工具"），必须更换为其他工具。
+3. 每次只调用一个工具，收到结果后再决定下一步。
 
-    content_stripped = content.strip()
-    print(f"[Agent] 第 {tool_call_count + 1} 次决策输出: {content_stripped[:200]}...")
+## 已尝试工具
+{called_tools_str}
+{hint_text}
 
-    if content_stripped.startswith("[最终回答]"):
-        # 提取答案（去掉 [最终回答] 标记）
-        answer = content_stripped[len("[最终回答]"):].strip()
-        if not answer:
-            answer = "很抱歉，我暂时无法回答您的问题。"
-        print(f"[Agent] 第 {tool_call_count + 1} 次决策：直接回答，长度 {len(answer)}")
-        return {"final_answer": answer, "messages": [AIMessage(content=content_stripped)]}
+## 用户问题
+{state['query']}
 
-    elif content_stripped.startswith("[调用工具]"):
-        # 尝试提取 JSON
-        try:
-            # 找到第一个 '{' 开始的 JSON 字符串
-            json_start = content_stripped.index('{')
-            json_str = content_stripped[json_start:]
-            tool_info = json.loads(json_str)
-            tool_name = tool_info.get("tool_name", "")
-            arguments = tool_info.get("arguments", {})
-            if not tool_name:
-                raise ValueError("缺少 tool_name")
+## 输出格式
+- 调用工具：输出 JSON {{"action": "tool", "tool_name": "工具名", "arguments": {{"query": "完整查询"}}}}
+- 直接回答：输出 ANSWER"""
 
-            # 构造一个 AIMessage 包含一个 tool_call，以便 ToolNode 执行
-            tool_call_msg = AIMessage(
-                content=content_stripped,  # 保留完整反思内容
-                tool_calls=[{
-                    "name": tool_name,
-                    "args": arguments,
-                    "id": f"call_{tool_call_count}"
-                }]
-            )
-            print(f"[Agent] 第 {tool_call_count + 1} 次决策调用: {tool_name}")
-            return {"messages": [tool_call_msg]}
-        except (json.JSONDecodeError, ValueError, IndexError) as e:
-            print(f"[Agent] 解析工具调用 JSON 失败: {e}")
-            # 如果解析失败，当做最终回答处理
-            return {"final_answer": content_stripped, "messages": [AIMessage(content=content_stripped)]}
+    response = llm.invoke([HumanMessage(content=prompt)])
+    content = response.content.strip()
 
+    if content == "ANSWER" or not content.startswith("{"):
+        print(f"{'─'*40}\n[Supervisor] 决策：直接回答\n{'─'*40}")
+        return {"next_action": "answer"}
+
+    try:
+        decision = json.loads(content)
+        tool_name = decision.get("tool_name", "")
+        arguments = decision.get("arguments", {})
+        if tool_name not in tool_names:
+            print(f"{'─'*40}\n[Supervisor] 工具 {tool_name} 不在可用列表中，改为直接回答\n{'─'*40}")
+            return {"next_action": "answer"}
+        print(f"{'─'*40}\n[Supervisor] 决策：调用 {tool_name} (查询: {str(arguments.get('query', ''))[:100]})\n{'─'*40}")
+        return {
+            "next_action": "tool",
+            "tool_name": tool_name,
+            "tool_args": arguments,
+        }
+    except json.JSONDecodeError:
+        print(f"{'─'*40}\n[Supervisor] JSON 解析失败，改为直接回答\n{'─'*40}")
+        return {"next_action": "answer"}
+
+def route_supervisor(state: AgentState) -> str:
+    action = state.get("next_action", "answer")
+    if action == "tool":
+        return "researcher"
+    return "answerer"
+
+# ───────────────────────── 研究员节点 ─────────────────────────
+def researcher_node(state: AgentState) -> dict:
+    """执行工具调用，记录工具到历史，递增循环计数"""
+    domain = state["domain"]
+    tool_name = state.get("tool_name", "")
+    tool_args = state.get("tool_args", {})
+
+    if not tool_args and state.get("query"):
+        tool_args = {"query": state["query"]}
+
+    instance = ToolRegistry.create(tool_name)
+    if not instance:
+        return {
+            "tool_result": json.dumps({"status": "failed", "message": f"工具 '{tool_name}' 不存在"}),
+            "loop_count": 1,
+        }
+
+    print(f"[Researcher] 执行工具: {tool_name}，参数: {json.dumps(tool_args, ensure_ascii=False)[:200]}")
+    result = instance.execute(tool_args)
+
+    if isinstance(result, dict) and "data" in result:
+        data = result["data"]
     else:
-        # 格式不符合预期，按最终回答处理
-        print("[Agent] 输出格式不符合预期，按回答处理")
-        return {"final_answer": content_stripped, "messages": [AIMessage(content=content_stripped)]}
+        data = str(result)
 
+    print(f"[Researcher] 结果预览: {str(data)[:200]}")
+    return {
+        "tool_result": data,
+        "tool_call_history": [tool_name],
+        "loop_count": 1,
+    }
 
-def route_after_agent(state: AgentState) -> str:
-    """Agent 节点后的路由：有 final_answer 则结束，有 tool_calls 则执行工具"""
-    if state.get("final_answer"):
-        return "end"
-    last_msg = state["messages"][-1] if state.get("messages") else None
-    if last_msg and hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-        return "tools"
-    return "end"
+def route_after_researcher(state: AgentState) -> str:
+    return "reflector"
 
+# ───────────────────────── 反思节点 ─────────────────────────
+def reflector_node(state: AgentState) -> dict:
+    """评估工具返回质量，给出评分和建议"""
+    llm = create_llm(state)
+    tool_result = state.get("tool_result", "")
+    query = state["query"]
 
+    if not tool_result:
+        return {"reflection_result": "failed", "reflection_hint": "工具返回为空，必须换工具"}
+
+    failure_keywords = ["查询失败", "HTTP Error", "未找到相关内容", "所有搜索接口均不可达"]
+    if any(kw in str(tool_result) for kw in failure_keywords):
+        return {"reflection_result": "failed", "reflection_hint": "工具返回明确失败信息，必须更换为其他工具"}
+
+    if "needs_more_info" in str(tool_result):
+        return {"reflection_result": "retry", "reflection_hint": "工具需要更多参数，请根据提示修改参数后重试"}
+
+    prompt = f"""评估以下工具返回结果的质量。
+
+用户问题：{query}
+工具返回：{str(tool_result)[:1000]}
+
+请回复：
+- high: 结果直接回答了用户问题，信息充分
+- low: 结果部分相关，但不够全面
+- failed: 结果无关或错误
+
+只回复一个单词：high / low / failed"""
+
+    response = llm.invoke([HumanMessage(content=prompt)])
+    evaluation = response.content.strip().lower()
+
+    hint_map = {
+        "high": "",
+        "low": "结果不够全面，建议更换工具或优化查询",
+        "failed": "结果与问题无关，必须更换工具重试",
+    }
+    hint = hint_map.get(evaluation, "结果质量不明，建议重新查询")
+
+    print(f"[Reflector] 质量评估: {evaluation} | 建议: {hint}")
+    return {"reflection_result": evaluation, "reflection_hint": hint}
+
+def route_reflector(state: AgentState) -> str:
+    result = state.get("reflection_result", "failed")
+    total_calls = state.get("loop_count", 0)
+    max_retries = 3
+
+    if result == "high" or total_calls >= max_retries:
+        print(f"{'─'*40}\n[Reflector] 进入回答节点 (质量: {result}, 调用次数: {total_calls})\n{'─'*40}")
+        return "answerer"
+    print(f"[Reflector] 返回监督者重新决策 (质量: {result}, 调用次数: {total_calls})")
+    return "supervisor"
+
+# ───────────────────────── 回答者节点 ─────────────────────────
+def answerer_node(state: AgentState) -> dict:
+    return {"final_answer": "__STREAMING_TRIGGER__"}
+
+# ───────────────────────── 编译图 ─────────────────────────
 def create_agent_graph():
-    """构建手动 ReAct 循环的 Agent 图"""
     workflow = StateGraph(AgentState)
 
-    # 获取所有医疗工具（用于 ToolNode）
-    tools = ToolRegistry.get_langchain_tools("medical")
+    workflow.add_node("supervisor", supervisor_node)
+    workflow.add_node("researcher", researcher_node)
+    workflow.add_node("reflector", reflector_node)
+    workflow.add_node("answerer", answerer_node)
 
-    workflow.add_node("safety_check", safety_check_node)
-    workflow.add_node("emergency_response", emergency_response_node)
-    workflow.add_node("agent", agent_node)
-    workflow.add_node("tools", ToolNode(tools))
-
-    workflow.set_entry_point("safety_check")
+    workflow.set_entry_point("supervisor")
 
     workflow.add_conditional_edges(
-        "safety_check", route_safety,
-        {"blocked": END, "emergency": "emergency_response", "safe": "agent"}
+        "supervisor", route_supervisor,
+        {"researcher": "researcher", "answerer": "answerer"}
     )
-    workflow.add_edge("emergency_response", END)
 
+    workflow.add_edge("researcher", "reflector")
     workflow.add_conditional_edges(
-        "agent", route_after_agent,
-        {"tools": "tools", "end": END}
+        "reflector", route_reflector,
+        {"supervisor": "supervisor", "answerer": "answerer"}
     )
-    workflow.add_edge("tools", "agent")  # 工具执行后回到 agent 继续反思
+
+    workflow.add_edge("answerer", END)
 
     return workflow.compile()

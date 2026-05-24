@@ -83,7 +83,7 @@ from core.safety.guard import SafetyGuard
 from core.domain.manager import domain_manager
 from core.retrieval.hybrid import HybridRetriever
 from core.agent.graph import create_agent_graph, AgentState
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 router = APIRouter()
 _safety_guard = SafetyGuard()
@@ -473,7 +473,7 @@ async def _handle_pro(request: Request, message: str, domain: str, session_id: s
 
 async def _handle_agent(request: Request, message: str, domain: str, session_id: str,
                         llm_config: dict, is_new_session: bool):
-    """Agent 版：LLM 自主决定调用工具、检索知识库、循环直到能回答"""
+    """Agent 版：监督者模式 + 反思节点 + 流式输出"""
     # 读取历史消息作为上下文
     context_messages = []
     try:
@@ -496,7 +496,7 @@ async def _handle_agent(request: Request, message: str, domain: str, session_id:
     except Exception:
         pass
 
-    initial_state: AgentState = {
+    initial_state = {
         "query": message,
         "domain": domain,
         "session_id": session_id,
@@ -505,6 +505,7 @@ async def _handle_agent(request: Request, message: str, domain: str, session_id:
         "safety_message": "",
         "safety_emergency": False,
         "tool_name": "",
+        "tool_args": {},
         "tool_result": "",
         "rag_context": "",
         "sources": [],
@@ -513,6 +514,9 @@ async def _handle_agent(request: Request, message: str, domain: str, session_id:
         "loop_count": 0,
         "llm_config": llm_config,
         "tool_call_history": [],
+        "next_action": "",
+        "reflection_result": "",
+        "reflection_hint": "",
     }
 
     async def event_generator():
@@ -560,43 +564,50 @@ async def _handle_agent(request: Request, message: str, domain: str, session_id:
                     full_answer += " [已中断]"
                     break
                 for node_name, node_data in event.items():
-                    if node_name == "safety_check":
-                        if node_data.get("safety_blocked"):
-                            msg = node_data.get("safety_message", "")
-                            full_answer = msg
-                            for chunk in _stream_text(msg):
-                                yield chunk
-                                await flush()
-                    elif node_name == "emergency_response":
-                        answer = node_data.get("final_answer", "")
-                        full_answer = answer
-                        for chunk in _stream_text(answer):
-                            yield chunk
-                            await flush()
-                    elif node_name == "agent":
-                        # agent 节点返回 final_answer 时直接推送
-                        if node_data.get("final_answer"):
-                            full_answer = node_data["final_answer"]
-                            for chunk in _stream_text(full_answer):
-                                yield chunk
-                                await flush()
-                    elif node_name == "tools":
-                        # 从 ToolNode 输出中提取工具名称
-                        msgs = node_data.get("messages", [])
-                        tool_names = []
-                        for msg in msgs:
-                            if hasattr(msg, "name") and msg.name:
-                                tool_names.append(msg.name)
-                        if tool_names:
-                            tool_list_str = ", ".join(tool_names)
-                            print(f"[Agent] 调用工具: {tool_list_str}")
+                    if node_name == "supervisor":
+                        pass
+                    elif node_name == "researcher":
+                        tool_name = node_data.get("tool_name", "")
+                        if tool_name:
                             yield _sse("tool_start", {
-                                "tools": tool_names,
-                                "message": f"正在调用工具: {tool_list_str}"
+                                "tools": [tool_name],
+                                "message": f"已调用: {tool_name}"
                             })
-                        else:
-                            yield _sse("tool_start", {"message": "正在分析您的问题..."})
-                        await flush()
+                            await flush()
+                    elif node_name == "reflector":
+                        pass
+                    # 回答者节点（流式生成触发）
+                    elif node_name == "answerer":
+                        if node_data.get("final_answer") == "__STREAMING_TRIGGER__":
+                            # 构建流式上下文
+                            config_obj = domain_manager.get_domain_config(domain)
+                            system_prompt = (config_obj.get("prompts", {}) or {}).get(
+                                "system", f"你是{domain}领域的助手，请基于提供的信息回答用户问题。"
+                            )
+                            # 收集工具结果摘要
+                            tool_result_text = initial_state.get("tool_result", "")
+                            parts = []
+                            if tool_result_text:
+                                parts.append(f"【工具分析结果】\n{tool_result_text}")
+                            if initial_state.get("rag_context"):
+                                parts.append(f"【知识库参考资料】\n{initial_state['rag_context']}")
+                            user_prompt = message
+                            if parts:
+                                user_prompt = f"{chr(10).join(parts)}\n\n【用户问题】\n{message}"
+
+                            stream_messages = [SystemMessage(content=system_prompt)]
+                            stream_messages.extend(context_messages)
+                            stream_messages.append(HumanMessage(content=user_prompt))
+
+                            streaming_llm = create_llm_from_config(llm_config)
+                            async for chunk in streaming_llm.astream(stream_messages):
+                                if cancel_event.is_set():
+                                    break
+                                text = chunk.content if hasattr(chunk, "content") else ""
+                                if text:
+                                    full_answer += text
+                                    yield _sse("content", {"text": text})
+                                    await flush()
         except Exception as e:
             yield _sse("error", {"message": f"处理失败: {str(e)}"})
             await flush()
@@ -614,6 +625,7 @@ async def _handle_agent(request: Request, message: str, domain: str, session_id:
                 yield chunk
                 await flush()
 
+        # 保存消息
         _save_message(session_id, "user", message)
         _save_message(session_id, "assistant", full_answer,
                       model=llm_config.get("model", ""),

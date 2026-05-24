@@ -155,15 +155,30 @@ class ToolRegistry:
 
     @classmethod
     def get_tools_description(cls, domain: str) -> str:
-        """生成 LLM 可读的工具描述列表"""
+        """生成 LLM 可读的工具描述列表，包含别名和适用场景"""
         tools = cls.list_by_domain(domain)
         if not tools:
             return "（无可用工具）"
 
+        # 别名映射：帮助 LLM 将模糊意图映射到精确工具名
+        aliases = {
+            "web_search": "（也称为：网络搜索、在线搜索、百度搜索、必应搜索）",
+            "knowledge_search": "（也称为：知识库检索、本地知识库）",
+            "drug_query": "（也称为：药品查询、药品信息、药物说明）",
+            "drug_purchase_link": "（也称为：购药链接、购买药品、网上买药）",
+            "symptom_checker": "（也称为：症状分析、症状自查、病情分析）",
+            "medical_resource": "（也称为：医院查询、附近医院、医疗资源）",
+            "report_reader": "（也称为：体检报告、化验单解读、指标解读）",
+            "insurance_query": "（也称为：医保查询、医保政策、报销查询）",
+            "weather_query": "（也称为：天气查询、天气预报）",
+        }
+
         lines = []
         for t in tools:
+            name = t['name']
             desc = t['description'].split('\n')[0]
-            lines.append(f"- {t['name']}: {desc}")
+            alias = aliases.get(name, "")
+            lines.append(f"- {name}: {desc}{alias}")
         return "\n".join(lines)
 
     @classmethod
@@ -201,10 +216,12 @@ class ToolRegistry:
             if instance.domain != domain and instance.domain != "builtin":
                 continue
 
+            # 用默认参数 _inst=instance 捕获当前实例，避免闭包延迟绑定
             @tool(name, description=instance.description)
-            def _tool(query: str = "", **kwargs: Any) -> str:
+            def _tool(query: str = "", _inst=instance, **kwargs: Any) -> str:
+                print(f"[ToolRegistry] 调用工具 {_inst.name}，实例类型: {type(_inst).__name__}")
                 params = {"query": query, **kwargs}
-                result = instance.execute(params)
+                result = _inst.execute(params)
                 return result["data"]
 
             tools.append(_tool)
