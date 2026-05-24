@@ -15,17 +15,28 @@ from dotenv import load_dotenv
 import re
 
 def _get_db_path() -> str:
-    """从 DATABASE_URL 解析 SQLite 文件路径，兼容 Prisma 格式"""
-    db_url = os.getenv("DATABASE_URL", "file:./prisma/dev.db")
-    match = re.search(r'file:(.+)', db_url)
-    if match:
-        path = match.group(1)
-        if not os.path.isabs(path):
-            base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            path = os.path.join(base, path)
-        return os.path.abspath(path)
-    default_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "prisma", "dev.db")
-    return os.path.abspath(default_path)
+    """从 DATABASE_URL 或默认路径获取 SQLite 文件绝对路径"""
+    db_url = os.getenv("DATABASE_URL", "").strip()
+    if not db_url:
+        db_url = "file:./prisma/dev.db"
+    # 提取 file: 后的路径
+    if db_url.startswith("file:"):
+        rel_path = db_url[5:]
+        # 去掉可能的前导 ./
+        if rel_path.startswith("./"):
+            rel_path = rel_path[2:]
+        # 项目根目录：backend/ 的父目录
+        # __file__ 是 backend/app/chat.py
+        # 向上三级：chat.py -> app -> backend -> 项目根
+        base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        db_path = os.path.abspath(os.path.join(base, rel_path))
+        # 确保目录存在
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        return db_path
+    # 如果已经是绝对路径
+    db_path = os.path.abspath(db_url)
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    return db_path
 
 _DB_PATH = None
 
