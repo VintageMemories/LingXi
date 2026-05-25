@@ -15,28 +15,6 @@ from core.tools.registry import ToolRegistry
 
 _safety_guard = SafetyGuard()
 
-# ───────────────────────── 安全节点 ─────────────────────────
-def safety_check_node(state: AgentState) -> dict:
-    config = domain_manager.get_domain_config(state["domain"])
-    result = _safety_guard.check(state["query"], config)
-    return {
-        "safety_blocked": result["blocked"],
-        "safety_message": result["message"],
-        "safety_emergency": result["emergency"],
-    }
-
-def route_safety(state: AgentState) -> str:
-    if state.get("safety_blocked"):
-        return "blocked"
-    if state.get("safety_emergency"):
-        return "emergency"
-    return "safe"
-
-def emergency_response_node(state: AgentState) -> dict:
-    config = domain_manager.get_domain_config(state["domain"])
-    prompts = config.get("prompts", {}) or {}
-    msg = prompts.get("emergency", "检测到紧急情况，请立即就医")
-    return {"final_answer": msg}
 
 # ───────────────────────── 监督者节点 ─────────────────────────
 def supervisor_node(state: AgentState) -> dict:
