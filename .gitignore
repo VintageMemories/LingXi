@@ -122,6 +122,12 @@ backend/__pycache__/
 tools/__pycache__/
 
 # ----------------------------------------
-# 模型文件 (原始目录被忽略，使用 model.zip 分发)
+# 大模型文件 (本地下载的模型，不提交到 Git)
 # ----------------------------------------
-backend/models/multilingual-e5-small/
+backend/models/
+
+# ----------------------------------------
+# 知识库与索引 (运行时数据，不提交到 Git)
+# ----------------------------------------
+backend/data/medical_knowledge.txt
+backend/data/index/

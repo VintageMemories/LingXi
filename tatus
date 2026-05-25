@@ -1,0 +1,36 @@
+[33mcommit 995a25700961222545acfb2dfb8c9e96537772ed[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: VintageMemories <1507671993@qq.com>
+Date:   Mon May 25 18:08:44 2026 +0800
+
+    chore: 从仓库移除大文件，更新.gitignore
+
+ .gitignore                                         |   10 [32m+[m[31m-[m
+ backend/data/index/dense.npy                       |  Bin [31m839808[m -> [32m0[m bytes
+ backend/data/index/documents.json                  | 1027 [31m--------------------[m
+ backend/data/index/sparse.json                     |    1 [31m-[m
+ backend/data/medical_knowledge.txt                 |  508 [31m----------[m
+ backend/models/bge-m3/.gitattributes               |   37 [31m-[m
+ backend/models/bge-m3/.msc                         |  Bin [31m2125[m -> [32m0[m bytes
+ backend/models/bge-m3/.mv                          |    1 [31m-[m
+ backend/models/bge-m3/1_Pooling/config.json        |    7 [31m-[m
+ backend/models/bge-m3/README.md                    |  300 [31m------[m
+ backend/models/bge-m3/colbert_linear.pt            |    3 [31m-[m
+ backend/models/bge-m3/config.json                  |   28 [31m-[m
+ .../bge-m3/config_sentence_transformers.json       |    7 [31m-[m
+ backend/models/bge-m3/configuration.json           |    1 [31m-[m
+ backend/models/bge-m3/imgs/bm25.jpg                |  Bin [31m131849[m -> [32m0[m bytes
+ backend/models/bge-m3/imgs/long.jpg                |  Bin [31m485432[m -> [32m0[m bytes
+ backend/models/bge-m3/imgs/miracl.jpg              |  Bin [31m576482[m -> [32m0[m bytes
+ backend/models/bge-m3/imgs/mkqa.jpg                |  Bin [31m608027[m -> [32m0[m bytes
+ backend/models/bge-m3/imgs/nqa.jpg                 |  Bin [31m158358[m -> [32m0[m bytes
+ backend/models/bge-m3/imgs/others.webp             |  Bin [31m20984[m -> [32m0[m bytes
+ backend/models/bge-m3/long.jpg                     |  Bin [31m126894[m -> [32m0[m bytes
+ backend/models/bge-m3/modules.json                 |   20 [31m-[m
+ backend/models/bge-m3/pytorch_model.bin            |    3 [31m-[m
+ backend/models/bge-m3/sentence_bert_config.json    |    4 [31m-[m
+ backend/models/bge-m3/sentencepiece.bpe.model      |    3 [31m-[m
+ backend/models/bge-m3/sparse_linear.pt             |    3 [31m-[m
+ backend/models/bge-m3/special_tokens_map.json      |   51 [31m-[m
+ backend/models/bge-m3/tokenizer.json               |    3 [31m-[m
+ backend/models/bge-m3/tokenizer_config.json        |   20 [31m-[m
+ 29 files changed, 8 insertions(+), 2029 deletions(-)
