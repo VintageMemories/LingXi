@@ -8,7 +8,6 @@ from .registry import DataSourceRegistry, get_registry
 from .pipeline.importer import ImportPipeline
 from .adapters.web.a_hospital import AHospitalAdapter
 from .adapters.dataset.huatuo import HuatuoAdapter
-from .spider import AHospitalSpider
 
 __all__ = [
     "DataSourceAdapter",
@@ -20,6 +19,5 @@ __all__ = [
     "ImportPipeline",
     "AHospitalAdapter",
     "HuatuoAdapter",
-    "AHospitalSpider",
     "compute_fingerprint",
 ]

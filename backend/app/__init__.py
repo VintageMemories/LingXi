@@ -36,6 +36,9 @@ async def startup():
     warmup()
     from app.chat import init_chat_module
     init_chat_module()
+    # 预加载知识库索引
+    from core.tools.builtin.knowledge_search import KnowledgeSearchTool
+    KnowledgeSearchTool._init_retriever()
     print("  ✅ Lingxi API 服务已启动")
 
 

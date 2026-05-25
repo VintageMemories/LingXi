@@ -6,6 +6,12 @@ import ssl
 import os
 from typing import AsyncGenerator, Dict
 
+# ====== 必须在导入 datasets 前设置 ======
+os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+os.environ['HF_HUB_ENABLE_HTTP1'] = '1'
+ssl._create_default_https_context = ssl._create_unverified_context
+# =======================================
+
 from core.data_sources.base import DataSourceAdapter
 from core.data_sources.config import DataSourceConfig, DataSourceType
 from core.data_sources.entry import RawKnowledgeEntry
@@ -26,14 +32,13 @@ class HuatuoAdapter(DataSourceAdapter):
             return False
 
     async def fetch_entries(self) -> AsyncGenerator[RawKnowledgeEntry, None]:
-        os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-        ssl._create_default_https_context = ssl._create_unverified_context
         from datasets import load_dataset
 
         dataset = load_dataset(self.dataset_name, split=self.split, streaming=True)
         count = 0
 
-        def _iterate():
+        def _collect_all():
+            results = []
             nonlocal count
             for item in dataset:
                 if self.max_entries and count >= self.max_entries:
@@ -52,16 +57,13 @@ class HuatuoAdapter(DataSourceAdapter):
                     source_id=f"huatuo_{count}",
                     tags=["问答", "华佗", "医学知识图谱"],
                 )
+                results.append(entry)
                 count += 1
-                yield entry
+            return results
 
-        iterator = _iterate()
-        while True:
-            try:
-                entry = await asyncio.to_thread(next, iterator)
-                yield entry
-            except StopIteration:
-                break
+        all_entries = await asyncio.to_thread(_collect_all)
+        for entry in all_entries:
+            yield entry
 
     def get_metadata(self) -> Dict:
         return {

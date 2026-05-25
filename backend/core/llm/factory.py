@@ -25,7 +25,7 @@ def _build_llm(config: dict):
                 model=model,
                 api_key=api_key,
                 api_base=base_url,
-                temperature=0.7,
+                temperature=0.15,
                 timeout=60,
             )
             llm.http_client = httpx.Client(verify=False, timeout=timeout)

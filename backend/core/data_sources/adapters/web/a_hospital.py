@@ -15,7 +15,14 @@ class AHospitalAdapter(DataSourceAdapter):
         super().__init__(config)
         self.base_url = config.options.get("base_url", "https://www.a-hospital.com")
         self.delay = config.options.get("delay", 1.0)
-        self.list_urls = config.options.get("list_urls", ["https://www.a-hospital.com/w/疾病列表"])
+        self.list_urls = config.options.get(
+            "list_urls",
+            [
+                "https://www.a-hospital.com/w/%E7%96%BE%E7%97%85%E5%88%86%E7%B1%BB",
+                "https://www.a-hospital.com/w/%E7%96%BE%E7%97%85%E5%88%97%E8%A1%A8",
+                "https://www.a-hospital.com/index.php/%E7%96%BE%E7%97%85%E5%88%97%E8%A1%A8"
+            ],
+        )
 
     def validate_config(self) -> bool:
         return bool(self.base_url and self.list_urls)
@@ -32,17 +39,43 @@ class AHospitalAdapter(DataSourceAdapter):
         }
         blacklist = ["首页", "疾病列表", "疾病分类", "常见疾病", "分类", "列表", "A+医学百科"]
 
+        # 如果列表页获取失败，尝试从常见疾病列表页获取链接
         for list_url in self.list_urls:
-            links = await asyncio.to_thread(spider.get_links, list_url, '/w/', blacklist)
-            for url in links:
-                soup = await asyncio.to_thread(spider.fetch, url)
-                if not soup:
-                    continue
-                data = await asyncio.to_thread(spider.parse_sections, soup, section_map)
-                data['url'] = url
-                entry = self._to_entry(data)
-                if entry and entry.title:
-                    yield entry
+            soup = await asyncio.to_thread(spider.fetch, list_url)
+            if soup:
+                # 直接从列表页提取链接
+                for link in soup.find_all('a', href=True):
+                    href = link['href']
+                    text = link.text.strip()
+                    if '/index.php/' in href or '/w/' in href:
+                        if ':' not in href and text not in blacklist and len(text) > 1:
+                            full_url = self.base_url + href if href.startswith('/') else href
+                            if full_url not in spider.visited_urls:
+                                spider.visited_urls.add(full_url)
+                                page_soup = await asyncio.to_thread(spider.fetch, full_url)
+                                if page_soup:
+                                    data = await asyncio.to_thread(spider.parse_sections, page_soup, section_map)
+                                    data['url'] = full_url
+                                    entry = self._to_entry(data)
+                                    if entry and entry.title:
+                                        yield entry
+        else:
+            # 如果列表页获取失败，尝试使用备用方案：直接尝试一些常见疾病URL
+            if not soup:
+                # 备用URL列表（通过首页可能链接到的疾病页面）
+                backup_urls = [
+                    "https://www.a-hospital.com/w/%E9%AB%98%E8%A1%80%E5%8E%8B",
+                    "https://www.a-hospital.com/w/%E7%B3%96%E5%B0%BF%E7%97%85",
+                    "https://www.a-hospital.com/w/%E5%86%A0%E5%BF%83%E7%97%85",
+                ]
+                for url in backup_urls:
+                    page_soup = await asyncio.to_thread(spider.fetch, url)
+                    if page_soup:
+                        data = await asyncio.to_thread(spider.parse_sections, page_soup, section_map)
+                        data['url'] = url
+                        entry = self._to_entry(data)
+                        if entry and entry.title:
+                            yield entry
 
     def _to_entry(self, data: Dict) -> Optional[RawKnowledgeEntry]:
         if not data.get("title"):

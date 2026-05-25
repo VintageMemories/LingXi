@@ -155,7 +155,7 @@ def reflector_node(state: AgentState) -> dict:
     if not tool_result:
         return {"reflection_result": "failed", "reflection_hint": "工具返回为空，必须换工具"}
 
-    failure_keywords = ["查询失败", "HTTP Error", "未找到相关内容", "所有搜索接口均不可达"]
+    failure_keywords = ["查询失败", "HTTP Error", "所有搜索接口均不可达"]
     if any(kw in str(tool_result) for kw in failure_keywords):
         return {"reflection_result": "failed", "reflection_hint": "工具返回明确失败信息，必须更换为其他工具"}
 
@@ -167,10 +167,10 @@ def reflector_node(state: AgentState) -> dict:
 用户问题：{query}
 工具返回：{str(tool_result)[:1000]}
 
-请回复：
-- high: 结果直接回答了用户问题，信息充分
-- low: 结果部分相关，但不够全面
-- failed: 结果无关或错误
+评判标准：
+- high: 结果中至少有一条直接回答了用户问题（即使后面有其他不相关的结果混杂）
+- low: 结果中有部分相关的信息，但所有条目都不够完整
+- failed: 所有结果都与用户问题完全无关
 
 只回复一个单词：high / low / failed"""
 
@@ -179,7 +179,7 @@ def reflector_node(state: AgentState) -> dict:
 
     hint_map = {
         "high": "",
-        "low": "结果不够全面，建议更换工具或优化查询",
+        "low": "结果部分相关但不完整，可尝试优化查询词重新检索一次",
         "failed": "结果与问题无关，必须更换工具重试",
     }
     hint = hint_map.get(evaluation, "结果质量不明，建议重新查询")
