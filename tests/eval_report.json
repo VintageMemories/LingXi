@@ -1,0 +1,269 @@
+{
+  "summary": {
+    "total_retrieval": 27,
+    "safety_samples_separate": 3,
+    "categories": {
+      "positive": {
+        "total": 15,
+        "hits": 15,
+        "success_rate": 1.0
+      },
+      "negative": {
+        "total": 6,
+        "hits": 6,
+        "success_rate": 1.0
+      },
+      "boundary": {
+        "total": 6,
+        "hits": 2,
+        "success_rate": 0.3333
+      }
+    }
+  },
+  "details": [
+    {
+      "id": 1,
+      "question": "颜面部凹陷的手术治疗有些什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 2,
+      "rejected": false,
+      "response_preview": "[1] 颜面部凹陷的手术治疗有些什么？ - 疾病\n颜面部凹陷的手术治疗有些什么？\n\n[2] 颜面部凹陷的手术治疗有些什么？ - 概述\n自体颗粒脂肪移植；自体脂肪移植；自体脂肪干细胞移植；自体脂肪颗粒移植\n\n[3] 结核性脊柱后凸畸形的手术治疗有些什么？ - 概述\n全脊椎切除；截骨矫形；后路全脊椎切除矫形固定手术\n\n[4] 残余创面感染的辅助治疗有些什么？ - 概述\n全身浸浴护理\n\n[5] 连续性血"
+    },
+    {
+      "id": 2,
+      "question": "退变性失稳的手术治疗有哪些？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 1,
+      "rejected": false,
+      "response_preview": "[1] 退变性失稳的手术治疗有些什么？ - 概述\ncage植骨融合术\n\n[2] 退变性失稳的手术治疗有些什么？ - 疾病\n退变性失稳的手术治疗有些什么？\n\n[3] DCM缓慢性心律失常的手术治疗有些什么？ - 概述\n植入双腔起搏器\n\n[4] DCM缓慢性心律失常的手术治疗有些什么？ - 疾病\nDCM缓慢性心律失常的手术治疗有些什么？\n\n[5] 结核性脊柱后凸畸形的手术治疗有些什么？ - 概述\n全脊"
+    },
+    {
+      "id": 3,
+      "question": "结核性脊柱后凸畸形的手术治疗有什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 1,
+      "rejected": false,
+      "response_preview": "[1] 结核性脊柱后凸畸形的手术治疗有些什么？ - 概述\n全脊椎切除；截骨矫形；后路全脊椎切除矫形固定手术\n\n[2] 结核性脊柱后凸畸形的手术治疗有些什么？ - 疾病\n结核性脊柱后凸畸形的手术治疗有些什么？\n\n[3] 退变性失稳的手术治疗有些什么？ - 概述\ncage植骨融合术\n\n[4] 脊髓结核的影像学检查有些什么？ - 概述\n增强扫描；MR平扫；头颅CT\n\n[5] 颜面部凹陷的手术治疗有些什么"
+    },
+    {
+      "id": 4,
+      "question": "耳漏的推荐药有些什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 2,
+      "rejected": false,
+      "response_preview": "[1] 耳漏的推荐药有些什么？ - 疾病\n耳漏的推荐药有些什么？\n\n[2] 耳漏的推荐药有些什么？ - 概述\n头孢唑啉；TDP加头孢唑啉\n\n[3] 肾移植的推荐药有哪些？ - 概述\n吗替麦考酚酯胶囊；他克莫司胶囊；吗替麦考酚酯分散片；环孢素软胶囊；西罗莫司片\n\n[4] 电击伤所致脊髓病的推荐药有哪些？ - 概述\n益髓颗粒；巴氯芬片；注射用盐酸克林霉素；钆双胺注射液\n\n[5] 外伤型腰椎骨质增生症的"
+    },
+    {
+      "id": 5,
+      "question": "肥胖症的推荐药有哪些？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 1,
+      "rejected": false,
+      "response_preview": "[1] 肥胖症的推荐药有哪些？ - 概述\n轻身消胖丸；奥利司他片；降脂减肥片；盐酸二甲双胍肠溶片；轻身减肥片；降浊健美颗粒；排毒清脂胶囊；排毒清脂片；奥利司他胶囊；六味能消片\n\n[2] 肥胖症的推荐药有哪些？ - 疾病\n肥胖症的推荐药有哪些？\n\n[3] 外伤型腰椎骨质增生症的推荐药有些什么？ - 疾病\n外伤型腰椎骨质增生症的推荐药有些什么？\n\n[4] 外伤型腰椎骨质增生症的推荐药有些什么？ - 概"
+    },
+    {
+      "id": 6,
+      "question": "TBI大鼠肺损伤的推荐药是什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 1,
+      "rejected": false,
+      "response_preview": "[1] TBI大鼠肺损伤的推荐药有些什么？ - 概述\n丙泊酚\n\n[2] TBI大鼠肺损伤的推荐药有些什么？ - 疾病\nTBI大鼠肺损伤的推荐药有些什么？\n\n[3] ALI大鼠肺组织损伤的辅助治疗有些什么？ - 概述\n宣肺通腑\n\n[4] ALI大鼠肺组织损伤的辅助治疗有些什么？ - 疾病\nALI大鼠肺组织损伤的辅助治疗有些什么？\n\n[5] 晚期肺腺癌的推荐药有些什么？ - 概述\n厄洛替尼；羟喜树碱；"
+    },
+    {
+      "id": 7,
+      "question": "川崎的临床表现有些什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 2,
+      "rejected": false,
+      "response_preview": "[1] 川崎的临床表现有些什么？ - 疾病\n川崎的临床表现有些什么？\n\n[2] 川崎的临床表现有些什么？ - 概述\n奔马律；发热；心音低钝；心律齐；胸骨后疼痛；面色苍白；呕吐；精神差；无心包摩擦音；烦躁；胸闷\n\n[3] 面中份骨折的临床表现有些什么？ - 概述\n复视\n\n[4] 急性出血坏死型的临床表现有些什么？ - 疾病\n急性出血坏死型的临床表现有些什么？\n\n[5] 多奈哌齐的影像学检查有些什么？"
+    },
+    {
+      "id": 8,
+      "question": "膀胱损伤的症状是什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 2,
+      "rejected": false,
+      "response_preview": "[1] 膀胱损伤的症状是什么？ - 疾病\n膀胱损伤的症状是什么？\n\n[2] 膀胱损伤的症状是什么？ - 概述\n腹部压痛；膀胱阴道瘘；尿频；尿外渗；血尿；腹水；尿瘘；腹肌紧张；腹痛；息子龙；腹膜炎\n\n[3] 道损伤会转化成什么？ - 概述\n产后感染\n\n[4] 膀胱子宫内膜异位症的影像学检查有些什么？ - 概述\n超声；超声声像图；阴道超声；CT扫描；螺旋CT；彩色多普勒血流显像；超声检查；B超\n\n[5"
+    },
+    {
+      "id": 9,
+      "question": "少枝胶质细胞瘤及间变少枝胶质细胞瘤的症状有什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 2,
+      "rejected": false,
+      "response_preview": "[1] 少枝胶质细胞瘤及间变少枝胶质细胞瘤的症状是什么？ - 疾病\n少枝胶质细胞瘤及间变少枝胶质细胞瘤的症状是什么？\n\n[2] 少枝胶质细胞瘤及间变少枝胶质细胞瘤的症状是什么？ - 概述\n精神障碍；视力障碍；局灶症状；生长缓慢；颅内压增高；感觉障碍\n\n[3] 肺不典型类癌的临床表现有些什么？ - 概述\n周围型单一病灶；分叶多见；刺激性干咳；咳嗽；咳血丝痰；咯血\n\n[4] C区变异的临床表现有些什么"
+    },
+    {
+      "id": 10,
+      "question": "冈上肌腱损伤的影像学检查有哪些？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 2,
+      "rejected": false,
+      "response_preview": "[1] 冈上肌腱损伤的影像学检查有些什么？ - 疾病\n冈上肌腱损伤的影像学检查有些什么？\n\n[2] 冈上肌腱损伤的影像学检查有些什么？ - 概述\n超声；斜冠状位扫描；实时虚拟超声；双斜冠状位扫描；磁共振成像；MRI检查\n\n[3] 多奈哌齐的影像学检查有些什么？ - 概述\n脑电图\n\n[4] 超急性期、急性期脑梗死的影像学检查有些什么？ - 概述\nADC图\n\n[5] 脊髓结核的影像学检查有些什么？ -"
+    },
+    {
+      "id": 11,
+      "question": "膀胱子宫内膜异位症的影像学检查有些什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 1,
+      "rejected": false,
+      "response_preview": "[1] 膀胱子宫内膜异位症的影像学检查有些什么？ - 概述\n超声；超声声像图；阴道超声；CT扫描；螺旋CT；彩色多普勒血流显像；超声检查；B超\n\n[2] 膀胱子宫内膜异位症的影像学检查有些什么？ - 疾病\n膀胱子宫内膜异位症的影像学检查有些什么？\n\n[3] 原发性不孕症的内窥镜检查有些什么？ - 概述\n宫、腹腔镜；宫、腹腔镜检查；宫腔镜检查\n\n[4] 憩室或结石的影像学检查有些什么？ - 概述\n超"
+    },
+    {
+      "id": 12,
+      "question": "嗜水气单胞菌肠炎的发病原因是什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 2,
+      "rejected": false,
+      "response_preview": "[1] 嗜水气单胞菌肠炎的发病原因？ - 疾病\n嗜水气单胞菌肠炎的发病原因？\n\n[2] 嗜水气单胞菌肠炎的发病原因？ - 概述\n病因：嗜水气单胞菌属感染。\n\n[3] 新生鼠支气管肺发育不良的病因是什么？ - 概述\n高氧暴露\n\n[4] 小儿轮状病毒肠炎的症状有些什么？ - 概述\n上呼吸道感染\n\n[5] 鲍曼不动杆菌检出的发病部位是什么？ - 概述\n呼吸道"
+    },
+    {
+      "id": 13,
+      "question": "耳蜗损伤的病因是什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 2,
+      "rejected": false,
+      "response_preview": "[1] 耳蜗损伤的病因是什么？ - 疾病\n耳蜗损伤的病因是什么？\n\n[2] 耳蜗损伤的病因是什么？ - 概述\n豚鼠椎基底动脉缺血；噪声暴露；酪氨酸硝基化；缺氧；噪声；缺血\n\n[3] 幻听可能是什么疾病的症状? - 概述\n希尔德病；小儿阿托品类中毒；偏执性精神障碍；情感障碍；小儿发作性睡病；苯丙胺中毒；苯海拉明中毒；曼陀罗中毒；颞叶癫痫；感应性妄想性障碍；旅途精神病；白塞病伴发的精神障碍；小儿学校恐"
+    },
+    {
+      "id": 14,
+      "question": "遗传性帕金森病的病因是什么？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 1,
+      "rejected": false,
+      "response_preview": "[1] 遗传性帕金森病的病因是什么？ - 概述\nSYNC错义突变\n\n[2] 遗传性帕金森病的病因是什么？ - 疾病\n遗传性帕金森病的病因是什么？\n\n[3] 腺样囊性癌的发病原因？ - 概述\n(一)发病原因病因尚不明确，多数人认为肿瘤来自涎腺导管，也可能来自口腔粘膜的基底细胞。(二)发病机制肿瘤的发生源于机体正常细胞的恶性转化，生物学行为发生改变，形成自主生长的新生物，与致瘤因素导致的细胞内遗传物质"
+    },
+    {
+      "id": 15,
+      "question": "手术室导管相关性血流感染的预防措施有哪些？",
+      "category": "positive",
+      "hit": true,
+      "best_rank": 2,
+      "rejected": false,
+      "response_preview": "[1] 手术室导管相关性血流感染的预防措施有些什么？ - 疾病\n手术室导管相关性血流感染的预防措施有些什么？\n\n[2] 手术室导管相关性血流感染的预防措施有些什么？ - 概述\n碘伏消毒\n\n[3] 连续性血液净化中压疮的辅助治疗有些什么？ - 概述\n仰卧位；平托\n\n[4] 急性主动脉瓣反流的影像学检查有些什么？ - 概述\n冠脉血流显像技术\n\n[5] 防范护理纠纷的预防措施有些什么？ - 概述\n提高自"
+    },
+    {
+      "id": 16,
+      "question": "血压高怎么治疗？",
+      "category": "negative",
+      "hit": true,
+      "best_rank": null,
+      "rejected": true,
+      "response_preview": "未找到相关内容，建议调整关键词或查询其他来源。"
+    },
+    {
+      "id": 17,
+      "question": "推荐几部好看的科幻电影？",
+      "category": "negative",
+      "hit": true,
+      "best_rank": null,
+      "rejected": true,
+      "response_preview": "未找到相关内容，建议调整关键词或查询其他来源。"
+    },
+    {
+      "id": 18,
+      "question": "如何申请护照延期？",
+      "category": "negative",
+      "hit": true,
+      "best_rank": null,
+      "rejected": true,
+      "response_preview": "未找到相关内容，建议调整关键词或查询其他来源。"
+    },
+    {
+      "id": 19,
+      "question": "最新的iPhone 16有什么新功能？",
+      "category": "negative",
+      "hit": true,
+      "best_rank": null,
+      "rejected": true,
+      "response_preview": "未找到相关内容，建议调整关键词或查询其他来源。"
+    },
+    {
+      "id": 20,
+      "question": "新冠疫苗第四针什么时候可以打？",
+      "category": "negative",
+      "hit": true,
+      "best_rank": null,
+      "rejected": true,
+      "response_preview": "未找到相关内容，建议调整关键词或查询其他来源。"
+    },
+    {
+      "id": 21,
+      "question": "怎么学做红烧肉？",
+      "category": "negative",
+      "hit": true,
+      "best_rank": null,
+      "rejected": true,
+      "response_preview": "未找到相关内容，建议调整关键词或查询其他来源。"
+    },
+    {
+      "id": 22,
+      "question": "超声检查有哪些应用？",
+      "category": "boundary",
+      "hit": true,
+      "best_rank": 2,
+      "rejected": false,
+      "response_preview": "[1] 超声微泡的影像学检查有些什么？ - 概述\n超声造影\n\n[2] 儿童胃肠道疾病的影像学检查有些什么？ - 概述\n超声；高频超声\n\n[3] 憩室或结石的影像学检查有些什么？ - 概述\n超声图像\n\n[4] 超声微泡的影像学检查有些什么？ - 疾病\n超声微泡的影像学检查有些什么？\n\n[5] 胎儿胼胝体发育不良的影像学检查有些什么？ - 概述\n产前超声；三维超声；超声；磁共振"
+    },
+    {
+      "id": 23,
+      "question": "怎么处理感染？",
+      "category": "boundary",
+      "hit": false,
+      "best_rank": null,
+      "rejected": true,
+      "response_preview": "未找到相关内容，建议调整关键词或查询其他来源。"
+    },
+    {
+      "id": 24,
+      "question": "手术有什么风险？",
+      "category": "boundary",
+      "hit": true,
+      "best_rank": 1,
+      "rejected": false,
+      "response_preview": "[1] 外科治疗的风险评估因素有些什么？ - 概述\n年龄\n\n[2] 外科治疗的风险评估因素有些什么？ - 疾病\n外科治疗的风险评估因素有些什么？\n\n[3] 术前合并肺炎的风险评估因素有些什么？ - 概述\n苏醒时间延长；保留自主呼吸的通气方式\n\n[4] Ⅱ、Ⅲ度直肠脱垂的手术治疗有些什么？ - 概述\n三联手术\n\n[5] 下肢动脉栓塞术的并发症是什么？ - 概述\n骨筋膜室综合征"
+    },
+    {
+      "id": 25,
+      "question": "MRI能检查什么？",
+      "category": "boundary",
+      "hit": false,
+      "best_rank": null,
+      "rejected": true,
+      "response_preview": "未找到相关内容，建议调整关键词或查询其他来源。"
+    },
+    {
+      "id": 26,
+      "question": "这种病有什么症状？",
+      "category": "boundary",
+      "hit": false,
+      "best_rank": null,
+      "rejected": false,
+      "response_preview": "[1] 川崎的临床表现有些什么？ - 概述\n奔马律；发热；心音低钝；心律齐；胸骨后疼痛；面色苍白；呕吐；精神差；无心包摩擦音；烦躁；胸闷\n\n[2] 糖尿病 - 症状\n多尿、多饮、多食、体重减轻。可有皮肤瘙痒，尤其外阴瘙痒。血糖升高较快时可使眼房水、晶体渗透压改变而引起屈光改变致视力模糊。许多患者无任何症状，仅于健康检查或因各种疾病就诊化验时发现高血糖。\n\n[3] 肺不典型类癌的临床表现有些什么？ "
+    },
+    {
+      "id": 27,
+      "question": "头痛怎么办？",
+      "category": "boundary",
+      "hit": false,
+      "best_rank": null,
+      "rejected": true,
+      "response_preview": "未找到相关内容，建议调整关键词或查询其他来源。"
+    }
+  ],
+  "safety_samples_note": "安全样本需通过 SafetyGuard 单独测试，不计入检索评估。"
+}

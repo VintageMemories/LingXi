@@ -77,10 +77,9 @@ class VectorRetriever:
                     score += w * doc_weights[tid]
             sparse_scores[i] = score
 
-        # 归一化后加权混合 (0.5 / 0.5)
-        dense_max = dense_scores.max() + 1e-9
-        sparse_max = sparse_scores.max() + 1e-9
-        combined = 0.5 * (dense_scores / dense_max) + 0.5 * (sparse_scores / sparse_max)
+        # 不进行内部归一化，直接使用加权分数，保留原始相似度的大小关系
+        # 稠密和稀疏分数都已经是余弦相似度/内积，范围稳定可比较
+        combined = 0.5 * dense_scores + 0.5 * sparse_scores
 
         top_indices = np.argsort(combined)[::-1][:top_k]
         results = []

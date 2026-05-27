@@ -88,8 +88,9 @@ class SafetyGuard:
                 "message": self.EMERGENCY_RESPONSES["emergency_legal"],
             }
 
-        # 不当内容拦截
-        if intent == "blocked":
+        # 安全/违规内容拦截（细粒度标签 + 原始 blocked 标签）
+        safety_labels = {"self_harm", "violence", "sexual_content", "illegal_activity", "hate_speech", "blocked"}
+        if intent in safety_labels:
             return {
                 "blocked": True,
                 "emergency": False,
@@ -97,7 +98,7 @@ class SafetyGuard:
                 "intent": intent,
                 "intent_description": result["description"],
                 "confidence": confidence,
-                "message": "⚠️ 您的消息包含不当内容，已自动过滤。",
+                "message": "⚠️ 您的问题涉及不安全内容，已被安全系统拦截。"
             }
 
         # 正常消息

@@ -31,6 +31,7 @@ def supervisor_node(state: AgentState) -> dict:
     called_tools = state.get("tool_call_history", [])
     called_tools_str = ", ".join(called_tools) if called_tools else "无"
     reflection_hint = state.get("reflection_hint", "")
+    retry_count = state.get("retry_count", 0)
 
     hint_text = ""
     if reflection_hint:
@@ -42,10 +43,14 @@ def supervisor_node(state: AgentState) -> dict:
 ## 可用工具
 {tool_desc}
 
-## 工具调用策略（严格遵守）
-1. 若问题需要专业信息（药物、疾病、政策等），必须调用工具。
-2. 如果工具已被尝试过且失败（见"已尝试工具"），必须更换为其他工具。
-3. 每次只调用一个工具，收到结果后再决定下一步。
+## 工作流程（严格遵守）
+1. **首次尝试**：直接使用用户问题或稍作优化后调用 knowledge_search。
+2. **收到重写指令**：如果反思节点建议你“重写查询词”，你必须：
+   - 分析为什么上次检索失败（如：关键词太窄、太泛、缺少专业术语等）
+   - 重新构造一个更精准的查询词
+   - 再次调用 knowledge_search
+3. **重试限制**：最多重试 2 次。当前已是第 {retry_count} 次重试。
+4. **直接回答**：如果已有足够信息，或达到重试上限，直接输出 ANSWER。
 
 ## 已尝试工具
 {called_tools_str}
@@ -97,6 +102,10 @@ def researcher_node(state: AgentState) -> dict:
 
     if not tool_args and state.get("query"):
         tool_args = {"query": state["query"]}
+
+    # 如果是 knowledge_search，传入当前重试次数
+    if tool_name == "knowledge_search":
+        tool_args["retry_count"] = state.get("retry_count", 0)
 
     instance = ToolRegistry.create(tool_name)
     if not instance:
@@ -155,15 +164,22 @@ def reflector_node(state: AgentState) -> dict:
     response = llm.invoke([HumanMessage(content=prompt)])
     evaluation = response.content.strip().lower()
 
+    # 重写查询的 hint
     hint_map = {
         "high": "",
-        "low": "结果部分相关但不完整，可尝试优化查询词重新检索一次",
-        "failed": "结果与问题无关，必须更换工具重试",
+        "low": "结果不够全面，请重写查询词（更具体或更泛化）后重新调用 knowledge_search。",
+        "failed": "检索结果不相关，请分析原因并重写查询词后再次搜索。"
     }
     hint = hint_map.get(evaluation, "结果质量不明，建议重新查询")
 
     print(f"[Reflector] 质量评估: {evaluation} | 建议: {hint}")
-    return {"reflection_result": evaluation, "reflection_hint": hint}
+    # 返回时递增 retry_count
+    retry_increment = 1 if evaluation in ("low", "failed") else 0
+    return {
+        "reflection_result": evaluation,
+        "reflection_hint": hint,
+        "retry_count": retry_increment
+    }
 
 def route_reflector(state: AgentState) -> str:
     result = state.get("reflection_result", "failed")

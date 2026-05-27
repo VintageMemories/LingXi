@@ -194,6 +194,8 @@ class KnowledgeSearchTool(BaseTool):
 
     def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         query = params.get("query", "")
+        retry_count = params.get("retry_count", 0)
+
         if not query:
             return {"status": "failed", "data": "请提供搜索内容"}
 
@@ -204,7 +206,11 @@ class KnowledgeSearchTool(BaseTool):
         try:
             results = self._retriever.search(query, top_k=5)
 
-            if not results:
+            # 动态阈值：首次严格，后续逐渐放宽
+            base_threshold = 0.3
+            dynamic_threshold = max(0.1, base_threshold - retry_count * 0.1)  # 每次重试降低 0.1，最低 0.1
+
+            if not results or results[0].get("score", 0) < dynamic_threshold:
                 return {"status": "success", "data": "未找到相关内容，建议调整关键词或查询其他来源。"}
 
             lines = []

@@ -30,3 +30,4 @@ class AgentState(TypedDict):
     next_action: str
     reflection_result: str
     reflection_hint: str
+    retry_count: Annotated[int, operator.add]         # 当前查询重试次数，自动累加
