@@ -37,20 +37,15 @@
 *   **🔌 插件式工具系统**：极低的扩展门槛，可快速添加新的功能工具（如医保查询、医院定位等）。
 *   **📊 高度可观测**：统一的日志格式，清晰展示 `[Supervisor]` 的决策、`[Researcher]` 的调用和 `[Reflector]` 的评估全过程。
 *   **🌐 多模型支持**：后端 LLM 工厂支持 DeepSeek、OpenAI、通义千问、智谱等兼容 OpenAI 接口的模型。目前仅对 DeepSeek 进行了完整测试，其他模型理论上可用，但可能需要微调配置。
+*   **🧪 专业评估体系**：内置 RAG 评估工具包 (`rag_toolkit.bat`)，支持模型完整性检查、索引构建、Hit Rate@5 评估和相似度阈值校准。
 
 ---
 
 ## 🏛️ 技术架构
 
-### 后端核心流程 (FastAPI + LangGraph)
-
-<img width="2510" height="2910" alt="后端核心流程 (Agent 决策图)" src="https://github.com/user-attachments/assets/669a4a47-a6f1-4adb-9736-f320582c4e79" />
-
----
-
-### 检索流程 (RAG Pipeline)
-
-<img width="3572" height="5826" alt="RAG 检索流程" src="https://github.com/user-attachments/assets/3cfd71aa-7f87-4e88-b88f-b5880d294eaa" />
+| 后端核心流程 (Agent 决策图) | 检索流程 (RAG Pipeline) |
+|:---:|:---:|
+| <img width="2510" height="2910" alt="后端核心流程 (Agent 决策图)" src="https://github.com/user-attachments/assets/669a4a47-a6f1-4adb-9736-f320582c4e79" /> | <img width="3572" height="5826" alt="RAG 检索流程" src="https://github.com/user-attachments/assets/3cfd71aa-7f87-4e88-b88f-b5880d294eaa" /> |
 
 ---
 
@@ -94,7 +89,8 @@ LingXi/
 │   ├── domains/                    # 领域 YAML 配置文件
 │   ├── models/                     # 本地模型存储 (Git忽略)
 │   ├── scripts/                    # 工具脚本
-│   │   └── build_index.py          # 离线索引构建
+│   │   ├── build_index.py          # 离线索引构建
+│   │   └── rag_toolkit.bat         # RAG 诊断与评估工具包
 │   ├── main.py                     # 后端启动入口
 │   └── pyproject.toml              # Python 项目依赖
 ├── src/                            # 前端代码 (Next.js 16)
@@ -103,6 +99,10 @@ LingXi/
 │   ├── hooks/                      # 自定义 React Hooks
 │   ├── lib/                        # 工具函数、国际化
 │   └── stores/                     # Zustand 状态管理
+├── tests/                          # 评估测试
+│   ├── __init__.py
+│   ├── eval_data.py                # 评估数据集
+│   └── eval_rag.py                 # 离线评估脚本
 ├── prisma/
 │   └── schema.prisma               # 数据库模型定义
 ├── public/                         # 静态资源
@@ -224,6 +224,21 @@ npm run dev
 
 ---
 
+## 🧪 RAG 诊断工具包
+
+项目内置了 `rag_toolkit.bat`，提供一站式 RAG 系统诊断与评估：
+
+| 选项 | 功能 | 说明 |
+|------|------|------|
+| `[1]` | 检查模型完整性 | 验证 BGE-M3 模型是否加载正常 |
+| `[2]` | 构建离线索引 | 重新切块并构建检索索引 |
+| `[3]` | 运行 RAG 评估 | 运行 30 条分层测试，输出 Hit Rate@5 与 MRR |
+| `[4]` | 校准相似度阈值 | 对比正面/负面样本的最高分数，辅助设定拒答阈值 |
+| `[5]` | 全部执行 (1-2-3) | 一键完成模型检查、索引构建、评估 |
+| `[6]` | 测试 SafetyGuard | 验证安全拦截（自杀、暴力、违规内容）是否生效 |
+
+---
+
 ## ❓ 常见问题 (FAQ)
 
 **Q: 为什么我提问后 Agent 一直在重试，最后给了一个笼统的回答？**  
@@ -248,8 +263,8 @@ A: 后端 LLM 工厂支持所有兼容 OpenAI 接口的模型，内置了 DeepSe
 
 ## 🙏 致谢
 
-*   [BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3)
-*   [华佗-26M](https://huggingface.co/datasets/FreedomIntelligence/huatuo_knowledge_graph_qa)
-*   [LangGraph](https://github.com/langchain-ai/langgraph)
-*   [shadcn/ui](https://ui.shadcn.com/)
-*   [ModelScope](https://modelscope.cn)
+*   [BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3) — 嵌入模型
+*   [华佗-26M](https://huggingface.co/datasets/FreedomIntelligence/huatuo_knowledge_graph_qa) — 医学知识数据集
+*   [LangGraph](https://github.com/langchain-ai/langgraph) — Agent 框架
+*   [shadcn/ui](https://ui.shadcn.com) — 前端 UI 组件
+*   [ModelScope](https://modelscope.cn) — 国内模型下载平台
